@@ -1,5 +1,5 @@
 # routers/convoy_routes.py
-
+#final broooo
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from models.convoy import Convoy, Vehicle
@@ -590,20 +590,54 @@ def get_convoy_route(convoy_id: int, current_user: dict = Depends(get_current_us
 
         # If no stored route, compute dynamic route
         if not stored_route or not stored_route.get("waypoints"):
-            # Compute dynamic route using the dynamic router
-            route_result = dynamic_reroute(
-                start_lat=convoy_rec["source_lat"],
-                start_lon=convoy_rec["source_lon"],
-                end_lat=convoy_rec["destination_lat"],
-                end_lon=convoy_rec["destination_lon"],
-                closure_points=[]  # You can add closure points from database if you have them
-            )
+            try:
+                # Try to compute dynamic route using the dynamic router
+                route_result = dynamic_reroute(
+                    start_lat=convoy_rec["source_lat"],
+                    start_lon=convoy_rec["source_lon"],
+                    end_lat=convoy_rec["destination_lat"],
+                    end_lon=convoy_rec["destination_lon"],
+                    closure_points=[]  # You can add closure points from database if you have them
+                )
 
-            if "error" in route_result:
-                raise HTTPException(status_code=500, detail=route_result["error"])
+                if "error" not in route_result:
+                    # Convert coordinates to waypoints format
+                    waypoints = [{"lat": lat, "lon": lon} for lat, lon in route_result["chosen_route"]]
 
-            # Convert coordinates to waypoints format
-            waypoints = [{"lat": lat, "lon": lon} for lat, lon in route_result["chosen_route"]]
+                    return JSONResponse({
+                        "status": "success",
+                        "convoy_id": convoy_id,
+                        "convoy_name": convoy_rec["convoy_name"],
+                        "source": {
+                            "lat": convoy_rec["source_lat"],
+                            "lon": convoy_rec["source_lon"]
+                        },
+                        "destination": {
+                            "lat": convoy_rec["destination_lat"],
+                            "lon": convoy_rec["destination_lon"]
+                        },
+                        "waypoints": waypoints,
+                        "distance_m": route_result.get("distance_m", 0),
+                        "eta_seconds": route_result.get("eta_seconds", 0),
+                        "closures": route_result.get("closures", []),
+                        "closed_segments": route_result.get("closed_segments", [])
+                    })
+            except Exception as route_error:
+                # Fallback to simple straight-line route if OSRM/dynamic routing fails
+                print(f"[ROUTE FALLBACK] Dynamic routing failed: {route_error}")
+                pass  # Continue to fallback below
+
+            # Fallback: Return simple straight-line route
+            simple_waypoints = [
+                {"lat": convoy_rec["source_lat"], "lon": convoy_rec["source_lon"]},
+                {"lat": convoy_rec["destination_lat"], "lon": convoy_rec["destination_lon"]}
+            ]
+
+            # Calculate approximate distance
+            distance_m = haversine_km(
+                convoy_rec["source_lat"], convoy_rec["source_lon"],
+                convoy_rec["destination_lat"], convoy_rec["destination_lon"]
+            ) * 1000
 
             return JSONResponse({
                 "status": "success",
@@ -617,11 +651,12 @@ def get_convoy_route(convoy_id: int, current_user: dict = Depends(get_current_us
                     "lat": convoy_rec["destination_lat"],
                     "lon": convoy_rec["destination_lon"]
                 },
-                "waypoints": waypoints,
-                "distance_m": route_result.get("distance_m", 0),
-                "eta_seconds": route_result.get("eta_seconds", 0),
-                "closures": route_result.get("closures", []),
-                "closed_segments": route_result.get("closed_segments", [])
+                "waypoints": simple_waypoints,
+                "distance_m": distance_m,
+                "eta_seconds": distance_m / 13.89,  # Assume ~50 km/h average speed
+                "closures": [],
+                "closed_segments": [],
+                "note": "Using fallback route (OSRM unavailable)"
             })
         else:
             # Return stored route
@@ -653,4 +688,3 @@ def get_convoy_route(convoy_id: int, current_user: dict = Depends(get_current_us
     finally:
         cur.close()
         conn.close()
-
