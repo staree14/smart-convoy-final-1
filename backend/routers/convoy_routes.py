@@ -7,7 +7,6 @@ from utils.helpers import haversine_km
 from utils.auth_utils import get_current_user
 from db_connection import get_connection
 from geocode_router import geocode_place
-from core.dynamic_router import dynamic_reroute
 import requests
 import json
 from typing import Optional
@@ -554,6 +553,7 @@ def suggest_merge(request: MergeRequest):
     finally:
         cur.close()
         conn.close()
+<<<<<<< HEAD
 
 
 # ----------------------------
@@ -653,3 +653,5 @@ def get_convoy_route(convoy_id: int, current_user: dict = Depends(get_current_us
     finally:
         cur.close()
         conn.close()
+=======
+>>>>>>> 0fb01e07efb41a9e6974a1735a04f66b7613c555

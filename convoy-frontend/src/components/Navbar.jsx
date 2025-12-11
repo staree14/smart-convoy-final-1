@@ -19,25 +19,25 @@ export default function Navbar() {
 
   return (
     <nav className="w-full bg-slate-900 border-b border-slate-800">
-      <div className="w-full px-8 py-6 flex items-center justify-between">
+      <div className="w-full px-6 py-3 flex items-center justify-between">
         {/* Left: Brand */}
         <div className="flex items-center">
-          <Link to="/" className="text-white font-bold text-2xl">Smart Convoy</Link>
+          <Link to="/" className="text-white font-bold text-lg">Smart Convoy</Link>
         </div>
 
         {/* Right: Navigation links */}
-        <div className="flex items-center gap-8">
-          <Link to="/dashboard" className="text-slate-300 hover:text-white text-lg">Dashboard</Link>
-          <Link to="/create-convoy" className="text-slate-300 hover:text-white text-lg">Create Convoy</Link>
-          <Link to="/history" className="text-slate-300 hover:text-white text-lg">History</Link>
+        <div className="flex items-center gap-6">
+          <Link to="/dashboard" className="text-slate-300 hover:text-white text-sm">Dashboard</Link>
+          <Link to="/create-convoy" className="text-slate-300 hover:text-white text-sm">Create Convoy</Link>
+          <Link to="/history" className="text-slate-300 hover:text-white text-sm">History</Link>
 
           {/* Profile name (non-clickable) */}
-          <span className="text-slate-300 text-lg opacity-90">{displayName}</span>
+          <span className="text-slate-300 text-sm opacity-90">{displayName}</span>
 
           {/* Logout button */}
           <button
             onClick={handleLogout}
-            className="text-base px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+            className="text-sm px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md"
           >
             Logout
           </button>
