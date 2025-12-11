@@ -1,0 +1,114 @@
+.page-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+}
+
+.page-container {
+  display: flex;
+  margin-top: 70px;
+}
+
+.page-content {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 260px;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2.5em;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+}
+
+.page-header p {
+  color: #666;
+  font-size: 1.05em;
+  margin: 0;
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.convoy-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.convoy-table thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.convoy-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+}
+
+.convoy-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+.convoy-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.convoy-id {
+  font-weight: 600;
+  color: #667eea;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.status-badge.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.status-in-progress {
+  background-color: #cce5ff;
+  color: #004085;
+}
+
+.status-badge.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    flex-direction: column;
+    margin-left: 0;
+  }
+
+  .page-content {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .convoy-table {
+    font-size: 0.9em;
+  }
+
+  .convoy-table th,
+  .convoy-table td {
+    padding: 0.75rem;
+  }
+}

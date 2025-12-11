@@ -1,288 +1,458 @@
 # routers/convoy_routes.py
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 from models.convoy import Convoy, Vehicle
 from utils.helpers import haversine_km
+from utils.auth_utils import get_current_user
+from db_connection import get_connection
+from geocode_router import geocode_place
+from core.dynamic_router import dynamic_reroute
 import requests
-from typing import Dict
+import json
+from typing import Optional
+from pydantic import BaseModel
 
 router = APIRouter()
 
-# In-memory storage (your teammate will replace this with real database)
-convoys_db: Dict[str, Convoy] = {}  # Key: convoy_name, Value: Convoy
-convoy_id_counter = 0
+# Request model for merge suggestion
+class MergeRequest(BaseModel):
+    convoy_a_id: int
+    convoy_b_id: int
+    max_extra_minutes: float = 30.0
+    same_dest_radius_km: float = 5.0
 
 
+# ----------------------------
+# Create convoy + vehicles + route
+# ----------------------------
 @router.post("/create")
-def create_convoy(convoy: Convoy):
+def create_convoy(convoy: Convoy, current_user: dict = Depends(get_current_user)):
     """
-    Create a new convoy or add vehicles to existing convoy.
-
-    If a convoy with the same name exists, vehicles will be added to it.
-    Otherwise, a new convoy will be created.
-
-    NOTE: Vehicles automatically inherit source/destination from convoy.
-
-    Example JSON:
-    {
-      "convoy_name": "Medical Supply Alpha",
-      "source_lat": 28.6139,
-      "source_lon": 77.2090,
-      "destination_lat": 28.4595,
-      "destination_lon": 77.0266,
-      "priority": "high",
-      "vehicles": [
-        {
-          "vehicle_type": "truck",
-          "registration_number": "DL-01-AB-1234",
-          "load_type": "medical",
-          "load_weight_kg": 500,
-          "capacity_kg": 1000,
-          "driver_name": "Raj Kumar"
-        }
-      ]
-    }
+    Create a new convoy and persist vehicles and route if provided.
+    Automatically sets created_by = logged-in user_id (from JWT).
     """
-    global convoy_id_counter
+    user_id = current_user["user_id"]
+
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
 
     try:
-        # Check if convoy with same name exists
-        if convoy.convoy_name in convoys_db:
-            existing_convoy = convoys_db[convoy.convoy_name]
+        # Geocode places if needed
+        if convoy.source_place and (convoy.source_lat is None or convoy.source_lon is None):
+            s = geocode_place(convoy.source_place)
+            if s:
+                convoy.source_lat = s["lat"]
+                convoy.source_lon = s["lon"]
 
-            # Check for duplicate vehicle registrations
-            existing_registrations = {v.registration_number for v in existing_convoy.vehicles}
-            for vehicle in convoy.vehicles:
-                if vehicle.registration_number in existing_registrations:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Vehicle with registration {vehicle.registration_number} already exists in convoy"
-                    )
+        if convoy.destination_place and (convoy.destination_lat is None or convoy.destination_lon is None):
+            d = geocode_place(convoy.destination_place)
+            if d:
+                convoy.destination_lat = d["lat"]
+                convoy.destination_lon = d["lon"]
 
-            # Add new vehicles to existing convoy
-            new_vehicle_count = len(convoy.vehicles)
-            existing_convoy.vehicles.extend(convoy.vehicles)
+        # Validate coordinates exist
+        if convoy.source_lat is None or convoy.source_lon is None or convoy.destination_lat is None or convoy.destination_lon is None:
+            raise HTTPException(status_code=400, detail="Convoy must include source and destination coordinates (lat/lon).")
 
-            return JSONResponse({
-                "status": "success",
-                "convoy_id": existing_convoy.id,
-                "convoy_name": existing_convoy.convoy_name,
-                "vehicle_count": existing_convoy.vehicle_count,
-                "new_vehicles_added": new_vehicle_count,
-                "total_load_kg": existing_convoy.total_load_kg,
-                "priority": existing_convoy.priority.value,
-                "message": f"Added {new_vehicle_count} vehicle(s) to existing convoy '{convoy.convoy_name}'"
-            })
-        else:
-            # Create new convoy
-            convoy_id_counter += 1
-            convoy.id = convoy_id_counter
+        # Insert convoy with created_by = user_id
+        cur.execute("""
+            INSERT INTO convoys
+            (convoy_name, source_place, destination_place,
+             source_lat, source_lon, destination_lat, destination_lon, priority, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING convoy_id;
+        """, (
+            convoy.convoy_name,
+            convoy.source_place or None,
+            convoy.destination_place or None,
+            convoy.source_lat,
+            convoy.source_lon,
+            convoy.destination_lat,
+            convoy.destination_lon,
+            convoy.priority.value if hasattr(convoy.priority, "value") else convoy.priority,
+            user_id
+        ))
 
-            # Check for duplicate registrations within the new convoy
-            registrations = [v.registration_number for v in convoy.vehicles]
-            if len(registrations) != len(set(registrations)):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Duplicate vehicle registration numbers in the same convoy"
-                )
+        row = cur.fetchone()
+        convoy_id = row["convoy_id"]
 
-            # Store convoy by name
-            convoys_db[convoy.convoy_name] = convoy
+        # Insert vehicles
+        for v in convoy.vehicles:
+            cur.execute("""
+                INSERT INTO vehicles
+                (convoy_id, vehicle_type, registration_number, load_type, load_weight_kg, capacity_kg, driver_name, current_status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING vehicle_id;
+            """, (
+                convoy_id,
+                v.vehicle_type.value if hasattr(v.vehicle_type, "value") else v.vehicle_type,
+                v.registration_number,
+                v.load_type.value if hasattr(v.load_type, "value") else v.load_type,
+                v.load_weight_kg,
+                v.capacity_kg,
+                v.driver_name,
+                v.current_status.value if hasattr(v.current_status, "value") else v.current_status
+            ))
 
-            return JSONResponse({
-                "status": "success",
-                "convoy_id": convoy.id,
-                "convoy_name": convoy.convoy_name,
-                "vehicle_count": convoy.vehicle_count,
-                "total_load_kg": convoy.total_load_kg,
-                "priority": convoy.priority.value,
-                "message": f"Convoy '{convoy.convoy_name}' created successfully"
-            })
+        # Insert route if present
+        if getattr(convoy, "route", None):
+            waypoints_json = json.dumps(convoy.route.waypoints) if convoy.route.waypoints else None
+
+            # Ensure routes table has waypoints column
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                                   WHERE table_name='routes' AND column_name='waypoints') THEN
+                        ALTER TABLE routes ADD COLUMN waypoints JSONB;
+                    END IF;
+                END$$;
+            """)
+
+            cur.execute("""
+                INSERT INTO routes (convoy_id, waypoints, total_distance_km, estimated_duration_minutes)
+                VALUES (%s, %s, %s, %s)
+                RETURNING route_id;
+            """, (
+                convoy_id,
+                waypoints_json,
+                getattr(convoy.route, "total_distance_km", None),
+                getattr(convoy.route, "estimated_duration_minutes", None)
+            ))
+
+        conn.commit()
+        return JSONResponse({
+            "status": "success",
+            "convoy_id": convoy_id,
+            "convoy_name": convoy.convoy_name,
+            "vehicle_count": len(convoy.vehicles),
+            "total_load_kg": convoy.total_load_kg,
+            "priority": convoy.priority.value if hasattr(convoy.priority, "value") else convoy.priority,
+            "message": f"Convoy '{convoy.convoy_name}' created successfully"
+        })
 
     except HTTPException:
+        conn.rollback()
         raise
     except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
 
 
-@router.post("/add-vehicle/{convoy_name}")
-def add_vehicle_to_convoy(convoy_name: str, vehicle: Vehicle):
+# ----------------------------
+# Add vehicle to existing convoy
+# ----------------------------
+@router.post("/add-vehicle/{convoy_id}")
+def add_vehicle_to_convoy(convoy_id: int, vehicle: Vehicle, current_user: dict = Depends(get_current_user)):
     """
-    Add a single vehicle to an existing convoy by convoy name.
-
-    NOTE: Vehicle automatically inherits source/destination from convoy.
-
-    Example JSON:
-    {
-      "vehicle_type": "truck",
-      "registration_number": "DL-01-AB-5678",
-      "load_type": "medical",
-      "load_weight_kg": 500,
-      "capacity_kg": 1000,
-      "driver_name": "Raj Kumar"
-    }
+    Add a vehicle to an existing convoy.
     """
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
     try:
-        # Find convoy by name
-        if convoy_name not in convoys_db:
-            raise HTTPException(status_code=404, detail=f"Convoy '{convoy_name}' not found")
+        # Check convoy exists
+        cur.execute("SELECT convoy_id FROM convoys WHERE convoy_id=%s;", (convoy_id,))
+        if not cur.fetchone():
+            raise HTTPException(status_code=404, detail="Convoy not found")
 
-        convoy = convoys_db[convoy_name]
+        # Check duplicate registration
+        if getattr(vehicle, "registration_number", None):
+            cur.execute("""
+                SELECT 1 FROM vehicles WHERE convoy_id=%s AND registration_number=%s LIMIT 1;
+            """, (convoy_id, vehicle.registration_number))
+            if cur.fetchone():
+                raise HTTPException(status_code=400, detail="Vehicle registration already exists for this convoy")
 
-        # Check if vehicle with same registration already exists
-        existing_registrations = {v.registration_number for v in convoy.vehicles}
-        if vehicle.registration_number in existing_registrations:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Vehicle with registration {vehicle.registration_number} already exists in convoy"
-            )
+        # Insert vehicle
+        cur.execute("""
+            INSERT INTO vehicles
+            (convoy_id, vehicle_type, registration_number, load_type, load_weight_kg, capacity_kg, driver_name, current_status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING vehicle_id;
+        """, (
+            convoy_id,
+            vehicle.vehicle_type.value if hasattr(vehicle.vehicle_type, "value") else vehicle.vehicle_type,
+            getattr(vehicle, "registration_number", None),
+            vehicle.load_type.value if hasattr(vehicle.load_type, "value") else vehicle.load_type,
+            vehicle.load_weight_kg,
+            vehicle.capacity_kg,
+            vehicle.driver_name,
+            vehicle.current_status.value if hasattr(vehicle.current_status, "value") else vehicle.current_status
+        ))
 
-        # Add vehicle to convoy
-        convoy.vehicles.append(vehicle)
+        row = cur.fetchone()
+        vehicle_id = row["vehicle_id"]
+
+        conn.commit()
+        return JSONResponse({"status": "success", "vehicle_id": vehicle_id, "message": f"Vehicle {vehicle.registration_number} added successfully."})
+
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ----------------------------
+# List convoys
+# ----------------------------
+@router.get("/list")
+def list_convoys(current_user: dict = Depends(get_current_user)):
+    """
+    List all convoys created by the logged-in user only.
+    """
+    user_id = current_user["user_id"]
+
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT convoy_id, convoy_name, priority, source_place, destination_place,
+                   source_lat, source_lon, destination_lat, destination_lon, created_at, created_by
+            FROM convoys
+            WHERE created_by = %s
+            ORDER BY created_at DESC;
+        """, (user_id,))
+        rows = cur.fetchall()
+
+        convoys = []
+        for rec in rows:
+            # Count vehicles
+            cur.execute("SELECT COUNT(*) as count FROM vehicles WHERE convoy_id=%s;", (rec["convoy_id"],))
+            vehicle_count = cur.fetchone()["count"]
+
+            # Calculate total load
+            cur.execute("SELECT COALESCE(SUM(load_weight_kg), 0) as total_load FROM vehicles WHERE convoy_id=%s;", (rec["convoy_id"],))
+            total_load = cur.fetchone()["total_load"]
+
+            convoys.append({
+                "id": rec["convoy_id"],
+                "convoy_name": rec["convoy_name"],
+                "priority": rec["priority"],
+                "vehicle_count": vehicle_count,
+                "total_load_kg": float(total_load),
+                "source": {"lat": rec["source_lat"], "lon": rec["source_lon"], "place": rec["source_place"]},
+                "destination": {"lat": rec["destination_lat"], "lon": rec["destination_lon"], "place": rec["destination_place"]},
+                "created_at": str(rec["created_at"]) if rec.get("created_at") else None,
+                "created_by": rec["created_by"]
+            })
+
+        return JSONResponse({"status": "success", "count": len(convoys), "convoys": convoys})
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ----------------------------
+# Get convoy details
+# ----------------------------
+@router.get("/{convoy_id}")
+def get_convoy(convoy_id: int):
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
+    try:
+        # Get convoy
+        cur.execute("""
+            SELECT convoy_id, convoy_name, priority, source_place, destination_place,
+                   source_lat, source_lon, destination_lat, destination_lon, created_at
+            FROM convoys WHERE convoy_id=%s;
+        """, (convoy_id,))
+
+        rec = cur.fetchone()
+        if not rec:
+            raise HTTPException(status_code=404, detail="Convoy not found")
+
+        # Get vehicles
+        cur.execute("""
+            SELECT vehicle_id, vehicle_type, registration_number, load_type, load_weight_kg,
+                   capacity_kg, driver_name, current_status
+            FROM vehicles WHERE convoy_id=%s ORDER BY vehicle_id;
+        """, (convoy_id,))
+        vehicles_raw = cur.fetchall()
+
+        # Format vehicles for frontend
+        vehicles = []
+        total_load = 0
+        for v in vehicles_raw:
+            vehicles.append({
+                "registration": v["registration_number"],
+                "type": v["vehicle_type"],
+                "status": v["current_status"],
+                "driver": v["driver_name"],
+                "load_type": v["load_type"],
+                "load_kg": float(v["load_weight_kg"]),
+                "capacity_kg": float(v["capacity_kg"])
+            })
+            total_load += float(v["load_weight_kg"] or 0)
+
+        # Get route
+        cur.execute("""
+            SELECT route_id, waypoints, total_distance_km, estimated_duration_minutes
+            FROM routes WHERE convoy_id=%s LIMIT 1;
+        """, (convoy_id,))
+        route = cur.fetchone()
 
         return JSONResponse({
             "status": "success",
-            "convoy_id": convoy.id,
-            "convoy_name": convoy.convoy_name,
-            "vehicle_count": convoy.vehicle_count,
-            "total_load_kg": convoy.total_load_kg,
-            "message": f"Vehicle {vehicle.registration_number} added to convoy '{convoy_name}'"
+            "convoy": {
+                "id": rec["convoy_id"],
+                "convoy_name": rec["convoy_name"],
+                "priority": rec["priority"],
+                "source_place": rec["source_place"],
+                "destination_place": rec["destination_place"],
+                "source_lat": rec["source_lat"],
+                "source_lon": rec["source_lon"],
+                "destination_lat": rec["destination_lat"],
+                "destination_lon": rec["destination_lon"],
+                "source": {"lat": rec["source_lat"], "lon": rec["source_lon"]},
+                "destination": {"lat": rec["destination_lat"], "lon": rec["destination_lon"]},
+                "vehicles": vehicles,
+                "vehicle_count": len(vehicles),
+                "total_load_kg": total_load,
+                "route": dict(route) if route else None,
+                "created_at": str(rec["created_at"]) if rec.get("created_at") else None
+            }
         })
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
 
 
-@router.get("/list")
-def list_convoys():
-    """Get all convoys."""
-    return JSONResponse({
-        "status": "success",
-        "count": len(convoys_db),
-        "convoys": [
-            {
-                "id": c.id,
-                "convoy_name": c.convoy_name,
-                "vehicle_count": c.vehicle_count,
-                "total_load_kg": c.total_load_kg,
-                "priority": c.priority.value,
-                "source": {"lat": c.source_lat, "lon": c.source_lon},
-                "destination": {"lat": c.destination_lat, "lon": c.destination_lon}
-            }
-            for c in convoys_db.values()
-        ]
-    })
-
-
-@router.get("/{convoy_id}")
-def get_convoy(convoy_id: int):
-    """Get specific convoy details."""
-    convoy = None
-    for c in convoys_db.values():
-        if c.id == convoy_id:
-            convoy = c
-            break
-
-    if not convoy:
-        raise HTTPException(status_code=404, detail="Convoy not found")
-
-    return JSONResponse({
-        "status": "success",
-        "convoy": {
-            "id": convoy.id,
-            "convoy_name": convoy.convoy_name,
-            "vehicle_count": convoy.vehicle_count,
-            "total_load_kg": convoy.total_load_kg,
-            "priority": convoy.priority.value,
-            "source": {"lat": convoy.source_lat, "lon": convoy.source_lon},
-            "destination": {"lat": convoy.destination_lat, "lon": convoy.destination_lon},
-            "vehicles": [
-                {
-                    "id": v.id,
-                    "registration": v.registration_number,
-                    "type": v.vehicle_type.value,
-                    "load_type": v.load_type.value,
-                    "load_kg": v.load_weight_kg,
-                    "capacity_kg": v.capacity_kg,
-                    "driver": v.driver_name,
-                    "status": v.current_status.value
-                }
-                for v in convoy.vehicles
-            ]
-        }
-    })
-
-
+# ----------------------------
+# Delete convoy
+# ----------------------------
 @router.delete("/{convoy_id}")
 def delete_convoy(convoy_id: int):
-    """Delete a convoy."""
-    convoy_name = None
-    for name, c in convoys_db.items():
-        if c.id == convoy_id:
-            convoy_name = name
-            break
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
 
-    if not convoy_name:
-        raise HTTPException(status_code=404, detail="Convoy not found")
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT convoy_name FROM convoys WHERE convoy_id=%s;", (convoy_id,))
+        rec = cur.fetchone()
+        if not rec:
+            raise HTTPException(status_code=404, detail="Convoy not found")
 
-    del convoys_db[convoy_name]
+        conv_name = rec["convoy_name"]
+        cur.execute("DELETE FROM convoys WHERE convoy_id=%s;", (convoy_id,))
+        conn.commit()
 
-    return JSONResponse({
-        "status": "success",
-        "message": f"Convoy '{convoy_name}' deleted successfully"
-    })
+        return JSONResponse({"status": "success", "message": f"Convoy '{conv_name}' deleted successfully"})
+
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
 
 
+# ----------------------------
+# Suggest merge (with database integration)
+# ----------------------------
 @router.post("/suggest_merge")
-def suggest_merge(convoy_a: Convoy, convoy_b: Convoy, max_extra_minutes: float = 30.0,
-                  same_dest_radius_km: float = 5.0):
+def suggest_merge(request: MergeRequest):
     """
     Suggest whether two convoys should merge based on capacity, destination proximity, and route detour.
 
     Rules:
+      - Destinations must be within same_dest_radius_km kilometers (checked first)
       - One convoy must have spare capacity to absorb the other's load
-      - Destinations must be within same_dest_radius_km kilometers
       - Detour must be <= max_extra_minutes
 
     Example JSON body:
     {
-      "convoy_a": {
-        "convoy_name": "Alpha",
-        "source_lat": 28.6139, "source_lon": 77.2090,
-        "destination_lat": 28.4595, "destination_lon": 77.0266,
-        "priority": "high",
-        "vehicles": [
-          {
-            "vehicle_type": "truck",
-            "registration_number": "DL-01-AB-1234",
-            "load_type": "medical",
-            "load_weight_kg": 500,
-            "capacity_kg": 1000
-          }
-        ]
-      },
-      "convoy_b": { ... similar structure ... },
+      "convoy_a_id": 1,
+      "convoy_b_id": 2,
       "max_extra_minutes": 30.0,
       "same_dest_radius_km": 5.0
     }
     """
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
+
     try:
-        # Calculate spare capacity for both convoys
-        def total_capacity(convoy: Convoy) -> float:
-            return sum(v.capacity_kg for v in convoy.vehicles)
+        # Fetch convoy A from database
+        cur.execute("""
+            SELECT convoy_id, convoy_name, priority, source_lat, source_lon, destination_lat, destination_lon
+            FROM convoys WHERE convoy_id=%s;
+        """, (request.convoy_a_id,))
+        convoy_a_rec = cur.fetchone()
+        if not convoy_a_rec:
+            raise HTTPException(status_code=404, detail=f"Convoy with ID {request.convoy_a_id} not found")
 
-        def spare_capacity(convoy: Convoy) -> float:
-            return total_capacity(convoy) - convoy.total_load_kg
+        # Fetch convoy B from database
+        cur.execute("""
+            SELECT convoy_id, convoy_name, priority, source_lat, source_lon, destination_lat, destination_lon
+            FROM convoys WHERE convoy_id=%s;
+        """, (request.convoy_b_id,))
+        convoy_b_rec = cur.fetchone()
+        if not convoy_b_rec:
+            raise HTTPException(status_code=404, detail=f"Convoy with ID {request.convoy_b_id} not found")
 
-        avail_a = spare_capacity(convoy_a)
-        avail_b = spare_capacity(convoy_b)
+        # Fetch vehicles for both convoys
+        cur.execute("SELECT load_weight_kg, capacity_kg FROM vehicles WHERE convoy_id=%s;", (request.convoy_a_id,))
+        vehicles_a = cur.fetchall()
 
-        # Check if either can absorb the other
-        a_can_absorb_b = avail_a >= convoy_b.total_load_kg
-        b_can_absorb_a = avail_b >= convoy_a.total_load_kg
+        cur.execute("SELECT load_weight_kg, capacity_kg FROM vehicles WHERE convoy_id=%s;", (request.convoy_b_id,))
+        vehicles_b = cur.fetchall()
+
+        # Check destination proximity FIRST
+        dest_dist_km = haversine_km(
+            convoy_a_rec["destination_lat"], convoy_a_rec["destination_lon"],
+            convoy_b_rec["destination_lat"], convoy_b_rec["destination_lon"]
+        )
+
+        if dest_dist_km > request.same_dest_radius_km:
+            return JSONResponse({
+                "can_merge": False,
+                "reason": f"Destinations too far apart ({dest_dist_km:.2f} km, threshold: {request.same_dest_radius_km} km)",
+                "dest_distance_km": round(dest_dist_km, 2)
+            })
+
+        # Calculate capacity and load
+        total_capacity_a = sum(v["capacity_kg"] for v in vehicles_a)
+        total_load_a = sum(v["load_weight_kg"] for v in vehicles_a)
+        total_capacity_b = sum(v["capacity_kg"] for v in vehicles_b)
+        total_load_b = sum(v["load_weight_kg"] for v in vehicles_b)
+
+        avail_a = total_capacity_a - total_load_a
+        avail_b = total_capacity_b - total_load_b
+
+        a_can_absorb_b = avail_a >= total_load_b
+        b_can_absorb_a = avail_b >= total_load_a
 
         if not (a_can_absorb_b or b_can_absorb_a):
             return JSONResponse({
@@ -290,21 +460,8 @@ def suggest_merge(convoy_a: Convoy, convoy_b: Convoy, max_extra_minutes: float =
                 "reason": "No convoy has enough spare capacity to absorb the other",
                 "convoy_a_spare_kg": round(avail_a, 2),
                 "convoy_b_spare_kg": round(avail_b, 2),
-                "convoy_a_load_kg": round(convoy_a.total_load_kg, 2),
-                "convoy_b_load_kg": round(convoy_b.total_load_kg, 2)
-            })
-
-        # Check destination proximity
-        dest_dist_km = haversine_km(
-            convoy_a.destination_lat, convoy_a.destination_lon,
-            convoy_b.destination_lat, convoy_b.destination_lon
-        )
-
-        if dest_dist_km > same_dest_radius_km:
-            return JSONResponse({
-                "can_merge": False,
-                "reason": f"Destinations too far apart ({dest_dist_km:.2f} km) > threshold {same_dest_radius_km} km",
-                "dest_distance_km": round(dest_dist_km, 2)
+                "convoy_a_load_kg": round(total_load_a, 2),
+                "convoy_b_load_kg": round(total_load_b, 2)
             })
 
         # Helper to get OSRM route duration
@@ -323,13 +480,13 @@ def suggest_merge(convoy_a: Convoy, convoy_b: Convoy, max_extra_minutes: float =
 
         # Scenario A picks up B
         direct_dur_A, _ = osrm_duration([
-            (convoy_a.source_lat, convoy_a.source_lon),
-            (convoy_a.destination_lat, convoy_a.destination_lon)
+            (convoy_a_rec["source_lat"], convoy_a_rec["source_lon"]),
+            (convoy_a_rec["destination_lat"], convoy_a_rec["destination_lon"])
         ])
         pickup_dur_A, _ = osrm_duration([
-            (convoy_a.source_lat, convoy_a.source_lon),
-            (convoy_b.source_lat, convoy_b.source_lon),
-            (convoy_a.destination_lat, convoy_a.destination_lon)
+            (convoy_a_rec["source_lat"], convoy_a_rec["source_lon"]),
+            (convoy_b_rec["source_lat"], convoy_b_rec["source_lon"]),
+            (convoy_a_rec["destination_lat"], convoy_a_rec["destination_lon"])
         ])
         extra_A = None
         if direct_dur_A is not None and pickup_dur_A is not None:
@@ -337,13 +494,13 @@ def suggest_merge(convoy_a: Convoy, convoy_b: Convoy, max_extra_minutes: float =
 
         # Scenario B picks up A
         direct_dur_B, _ = osrm_duration([
-            (convoy_b.source_lat, convoy_b.source_lon),
-            (convoy_b.destination_lat, convoy_b.destination_lon)
+            (convoy_b_rec["source_lat"], convoy_b_rec["source_lon"]),
+            (convoy_b_rec["destination_lat"], convoy_b_rec["destination_lon"])
         ])
         pickup_dur_B, _ = osrm_duration([
-            (convoy_b.source_lat, convoy_b.source_lon),
-            (convoy_a.source_lat, convoy_a.source_lon),
-            (convoy_b.destination_lat, convoy_b.destination_lon)
+            (convoy_b_rec["source_lat"], convoy_b_rec["source_lon"]),
+            (convoy_a_rec["source_lat"], convoy_a_rec["source_lon"]),
+            (convoy_b_rec["destination_lat"], convoy_b_rec["destination_lon"])
         ])
         extra_B = None
         if direct_dur_B is not None and pickup_dur_B is not None:
@@ -367,9 +524,8 @@ def suggest_merge(convoy_a: Convoy, convoy_b: Convoy, max_extra_minutes: float =
         best = min(candidates, key=lambda x: x[1])
         scenario, extra_min = best
 
-        if extra_min <= max_extra_minutes:
-            # Estimate fuel savings (convoy B doesn't need to make full trip)
-            fuel_savings_liters = dest_dist_km * 0.3  # ~0.3L per km saved
+        if extra_min <= request.max_extra_minutes:
+            fuel_savings_liters = dest_dist_km * 0.3
 
             return JSONResponse({
                 "can_merge": True,
@@ -384,12 +540,116 @@ def suggest_merge(convoy_a: Convoy, convoy_b: Convoy, max_extra_minutes: float =
         else:
             return JSONResponse({
                 "can_merge": False,
-                "reason": f"Best scenario {scenario} costs extra {extra_min:.1f} min > allowed {max_extra_minutes} min",
+                "reason": f"Best scenario {scenario} costs extra {extra_min:.1f} min > allowed {request.max_extra_minutes} min",
                 "extra_minutes": round(extra_min, 2)
             })
 
+    except HTTPException:
+        raise
     except Exception as e:
         return JSONResponse({
             "can_merge": False,
             "reason": f"Error: {str(e)}"
         })
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ----------------------------
+# Get convoy route with optimized path
+# ----------------------------
+@router.get("/{convoy_id}/route")
+def get_convoy_route(convoy_id: int, current_user: dict = Depends(get_current_user)):
+    """
+    Get optimized route for a convoy including waypoints.
+    Returns the dynamic route avoiding weather hazards and closures.
+    """
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
+    try:
+        # Get convoy details
+        cur.execute("""
+            SELECT convoy_id, convoy_name, source_lat, source_lon, destination_lat, destination_lon
+            FROM convoys WHERE convoy_id=%s AND created_by=%s;
+        """, (convoy_id, current_user["user_id"]))
+
+        convoy_rec = cur.fetchone()
+        if not convoy_rec:
+            raise HTTPException(status_code=404, detail="Convoy not found or access denied")
+
+        # Check if route exists in database
+        cur.execute("""
+            SELECT waypoints, total_distance_km, estimated_duration_minutes
+            FROM routes WHERE convoy_id=%s LIMIT 1;
+        """, (convoy_id,))
+        stored_route = cur.fetchone()
+
+        # If no stored route, compute dynamic route
+        if not stored_route or not stored_route.get("waypoints"):
+            # Compute dynamic route using the dynamic router
+            route_result = dynamic_reroute(
+                start_lat=convoy_rec["source_lat"],
+                start_lon=convoy_rec["source_lon"],
+                end_lat=convoy_rec["destination_lat"],
+                end_lon=convoy_rec["destination_lon"],
+                closure_points=[]  # You can add closure points from database if you have them
+            )
+
+            if "error" in route_result:
+                raise HTTPException(status_code=500, detail=route_result["error"])
+
+            # Convert coordinates to waypoints format
+            waypoints = [{"lat": lat, "lon": lon} for lat, lon in route_result["chosen_route"]]
+
+            return JSONResponse({
+                "status": "success",
+                "convoy_id": convoy_id,
+                "convoy_name": convoy_rec["convoy_name"],
+                "source": {
+                    "lat": convoy_rec["source_lat"],
+                    "lon": convoy_rec["source_lon"]
+                },
+                "destination": {
+                    "lat": convoy_rec["destination_lat"],
+                    "lon": convoy_rec["destination_lon"]
+                },
+                "waypoints": waypoints,
+                "distance_m": route_result.get("distance_m", 0),
+                "eta_seconds": route_result.get("eta_seconds", 0),
+                "closures": route_result.get("closures", []),
+                "closed_segments": route_result.get("closed_segments", [])
+            })
+        else:
+            # Return stored route
+            waypoints = stored_route["waypoints"]
+            if isinstance(waypoints, str):
+                waypoints = json.loads(waypoints)
+
+            return JSONResponse({
+                "status": "success",
+                "convoy_id": convoy_id,
+                "convoy_name": convoy_rec["convoy_name"],
+                "source": {
+                    "lat": convoy_rec["source_lat"],
+                    "lon": convoy_rec["source_lon"]
+                },
+                "destination": {
+                    "lat": convoy_rec["destination_lat"],
+                    "lon": convoy_rec["destination_lon"]
+                },
+                "waypoints": waypoints,
+                "distance_km": stored_route.get("total_distance_km", 0),
+                "duration_minutes": stored_route.get("estimated_duration_minutes", 0)
+            })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()

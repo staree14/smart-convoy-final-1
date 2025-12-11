@@ -11,16 +11,11 @@ class UserRole(str, Enum):
 
 class User(BaseModel):
     id: Optional[int] = None
-    username: str
     email: EmailStr
     full_name: str
     role: UserRole
-    unit: Optional[str] = None  # Military unit
-    rank: Optional[str] = None  # Military rank
     contact_number: Optional[str] = None
-    is_active: bool = True
     created_at: Optional[datetime] = None
-    last_login: Optional[datetime] = None
 
 class UserCreate(BaseModel):
     """For user registration."""
@@ -29,10 +24,8 @@ class UserCreate(BaseModel):
     password: str
     full_name: str
     role: UserRole
-    unit: Optional[str] = None
-    rank: Optional[str] = None
-
+    
 class UserLogin(BaseModel):
     """For login requests."""
-    username: str
+    full_name: str
     password: str

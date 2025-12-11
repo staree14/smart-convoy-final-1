@@ -1,0 +1,25 @@
+<!-- -add option to add vehicle to exisitng convoy without entering details again , so show convoy source n dest n then add vehicle option
+this should be shown under exisitng convoys -->
+
+<!-- - remove terrain  -->
+
+-show multiple convoy routes on same map(checkbox)
+
+<!-- -add option to enter convoy name and add vehicles to exisiting convoy -->
+
+-ai chatbot
+
+-risk zones, some weather alerts also 
+
+-check ppt for all features and app flow
+
+-proper frontend design, all inputs everythign proper
+
+- cache routes for faster loading?
+
+<!-- - nothing is shown in convoy history, load all convoys from backend -->
+
+- add feature of convoy status, ongoing, pending, completed
+
+<!-- - show the source n dest in list of convoys -->
+

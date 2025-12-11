@@ -9,6 +9,7 @@ class VehicleType(str, Enum):
     VAN = "van"
     ARMORED = "armored_vehicle"
     AMBULANCE = "ambulance"
+    
 
 
 class LoadType(str, Enum):
@@ -85,10 +86,13 @@ class Convoy(BaseModel):
     id: Optional[int] = None
     convoy_name: str
     vehicles: List[Vehicle]
-    source_lat: float
-    source_lon: float
-    destination_lat: float
-    destination_lon: float
+    # Coordinates may be provided directly or inferred from place names
+    source_place: Optional[str] = None
+    destination_place: Optional[str] = None
+    source_lat: Optional[float] = None
+    source_lon: Optional[float] = None
+    destination_lat: Optional[float] = None
+    destination_lon: Optional[float] = None
     priority: ConvoyPriority = ConvoyPriority.MEDIUM
     route: Optional[Route] = None
 
