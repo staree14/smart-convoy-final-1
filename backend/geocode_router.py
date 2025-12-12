@@ -11,19 +11,83 @@ NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 
 
-def geocode_place(query: str) -> Optional[dict]:
-    """Geocode a place string using Nominatim. Returns {'lat': float, 'lon': float} or None."""
+def geocode_place(query: str, retries: int = 2) -> Optional[dict]:
+    """
+    Geocode a place string using Nominatim with smart fallback strategies.
+    Returns {'lat': float, 'lon': float, 'display_name': str} or None.
+
+    Strategy:
+    1. Try exact query first
+    2. If fails, extract city/area name from query (text after last comma)
+    3. If still fails, try removing special characters and business names
+    """
     if not query:
         return None
-    params = {"q": query, "format": "json", "limit": 1}
-    try:
-        r = requests.get(NOMINATIM_URL, params=params, timeout=5, headers={"User-Agent": "Ai_Convoy/1.0"})
-        r.raise_for_status()
-        data = r.json()
-        if data and isinstance(data, list) and len(data) > 0:
-            return {"lat": float(data[0]["lat"]), "lon": float(data[0]["lon"]), "display_name": data[0].get("display_name", "")}
-    except Exception as e:
-        print("[GEOCODE] error", e)
+
+    # Try multiple search strategies
+    search_queries = [query]
+
+    # Strategy 2: If query contains comma, try the last part (usually city/area)
+    if ',' in query:
+        parts = [p.strip() for p in query.split(',')]
+        # Try "area, city" or just "city"
+        if len(parts) >= 2:
+            search_queries.append(f"{parts[-2]}, {parts[-1]}")  # Last 2 parts
+        search_queries.append(parts[-1])  # Just the last part (city/state)
+
+    # Strategy 3: Remove common business prefixes
+    clean_query = query
+    business_keywords = ['Institute', 'Career', 'Campus', 'Center', 'Centre', 'School', 'College']
+    for keyword in business_keywords:
+        clean_query = clean_query.replace(keyword, '')
+    clean_query = ' '.join(clean_query.split())  # Remove extra spaces
+    if clean_query != query and clean_query:
+        search_queries.append(clean_query)
+
+    for search_query in search_queries:
+        params = {"q": search_query, "format": "json", "limit": 1}
+
+        for attempt in range(retries + 1):
+            try:
+                r = requests.get(
+                    NOMINATIM_URL,
+                    params=params,
+                    timeout=10,
+                    headers={"User-Agent": "SmartConvoyAI/1.0"}
+                )
+                r.raise_for_status()
+                data = r.json()
+
+                if data and isinstance(data, list) and len(data) > 0:
+                    result = {
+                        "lat": float(data[0]["lat"]),
+                        "lon": float(data[0]["lon"]),
+                        "display_name": data[0].get("display_name", "")
+                    }
+                    if search_query != query:
+                        print(f"[GEOCODE] Success with fallback: '{query}' -> '{search_query}' -> {result['display_name']}")
+                    else:
+                        print(f"[GEOCODE] Success: '{query}' -> {result['display_name']}")
+                    return result
+
+            except requests.exceptions.Timeout:
+                print(f"[GEOCODE] Timeout on attempt {attempt + 1}/{retries + 1} for '{search_query}'")
+                if attempt < retries:
+                    time.sleep(1)
+                    continue
+            except requests.exceptions.RequestException as e:
+                print(f"[GEOCODE] Request error on attempt {attempt + 1}/{retries + 1} for '{search_query}': {e}")
+                if attempt < retries:
+                    time.sleep(1)
+                    continue
+            except Exception as e:
+                print(f"[GEOCODE] Unexpected error for '{search_query}': {e}")
+                break
+
+        # Rate limit between different search strategies
+        time.sleep(1)
+
+    print(f"[GEOCODE] Failed all strategies for '{query}'. Tried: {search_queries}")
     return None
 
 

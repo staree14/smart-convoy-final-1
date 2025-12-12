@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from utils.helpers import compute_eta, haversine_km
+from core.risk_zone_manager import get_risk_manager
 import requests
 from datetime import datetime, timedelta
 
@@ -45,28 +46,48 @@ def get_route(
     Example: /api/routes/get_route?start_lat=28.6139&start_lon=77.2090&end_lat=28.4595&end_lon=77.0266
     """
     try:
-        # Get route from OSRM
-        coords_str = f"{start_lon},{start_lat};{end_lon},{end_lat}"
-        url = f"https://router.project-osrm.org/route/v1/driving/{coords_str}?overview=full&geometries=geojson"
-        resp = requests.get(url, timeout=20)
-        resp.raise_for_status()
-        data = resp.json()
+        route_coordinates = None
+        total_distance_km = 0
+        osrm_duration_sec = 0
+        osrm_available = False
 
-        if "routes" not in data or not data["routes"]:
-            return JSONResponse(
-                {"status": "error", "message": "No route found"},
-                status_code=404
-            )
+        # Try to get route from OSRM
+        try:
+            coords_str = f"{start_lon},{start_lat};{end_lon},{end_lat}"
+            url = f"https://router.project-osrm.org/route/v1/driving/{coords_str}?overview=full&geometries=geojson"
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
 
-        # Extract route data
-        route = data["routes"][0]
-        geometry = route["geometry"]["coordinates"]
+            if "routes" in data and data["routes"]:
+                # Extract route data
+                route = data["routes"][0]
+                geometry = route["geometry"]["coordinates"]
 
-        # Convert to [lat, lon] format for frontend
-        route_coordinates = [[coord[1], coord[0]] for coord in geometry]
+                # Convert to [lat, lon] format for frontend
+                route_coordinates = [[coord[1], coord[0]] for coord in geometry]
 
-        total_distance_km = route.get("distance", 0) / 1000
-        osrm_duration_sec = route.get("duration", 0)
+                total_distance_km = route.get("distance", 0) / 1000
+                osrm_duration_sec = route.get("duration", 0)
+                osrm_available = True
+                print(f"[ROUTE] OSRM route fetched: {len(route_coordinates)} points")
+        except Exception as e:
+            print(f"[ROUTE] OSRM unavailable ({str(e)}), falling back to straight line route")
+
+        # Fallback: Create straight line route if OSRM failed
+        if route_coordinates is None:
+            # Create straight line with intermediate points for better visualization
+            num_points = 10
+            route_coordinates = []
+            for i in range(num_points + 1):
+                fraction = i / num_points
+                lat = start_lat + (end_lat - start_lat) * fraction
+                lon = start_lon + (end_lon - start_lon) * fraction
+                route_coordinates.append([lat, lon])
+
+            # Calculate straight line distance
+            total_distance_km = haversine_km(start_lat, start_lon, end_lat, end_lon)
+            print(f"[ROUTE] Using fallback straight line route: {total_distance_km:.2f} km")
 
         # Get ETA with our model
         eta_data = compute_eta(
@@ -107,6 +128,19 @@ def get_route(
                     "estimated_arrival": cp_arrival.strftime("%H:%M:%S")
                 })
 
+        # Detect risk zones along the route
+        risk_analysis = {}
+        danger_points = []
+        try:
+            risk_manager = get_risk_manager()
+            route_coords = [(coord[0], coord[1]) for coord in route_coordinates]
+            risk_analysis = risk_manager.detect_route_risks(route_coords, buffer_km=1.0)
+            danger_points = risk_analysis.get("danger_points", [])
+            print(f"[ROUTE] Found {len(danger_points)} risk zones along route")
+        except Exception as e:
+            print(f"[ROUTE] Risk detection failed: {e}")
+            risk_analysis = {"total_dangers": 0, "danger_points": [], "risk_summary": {}}
+
         return JSONResponse({
             "status": "success",
             "route": {
@@ -118,7 +152,9 @@ def get_route(
                 "estimated_arrival": arrival.strftime("%H:%M:%S"),
                 "terrain": terrain,
                 "traffic_level": traffic_level,
-                "model_used": eta_data.get("model_used", False)
+                "model_used": eta_data.get("model_used", False),
+                "osrm_available": osrm_available,
+                "route_type": "osrm" if osrm_available else "straight_line"
             },
             "start_point": {
                 "lat": start_lat,
@@ -128,7 +164,10 @@ def get_route(
                 "lat": end_lat,
                 "lon": end_lon
             },
-            "checkpoints": checkpoints
+            "checkpoints": checkpoints,
+            "danger_points": danger_points,
+            "risk_analysis": risk_analysis,
+            "warning": None if osrm_available else "OSRM routing service unavailable - showing straight line route as fallback"
         })
 
     except Exception as e:
