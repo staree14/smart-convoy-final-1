@@ -14,21 +14,13 @@ import csv
 import math
 import requests
 from typing import List, Tuple, Dict, Any
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
+# Initialize Router
+router = APIRouter()
+
 OSRM_URL = os.getenv("OSRM_URL", "http://router.project-osrm.org/route/v1/driving")
-
-app = FastAPI(title="Dynamic Route with Risk Zones")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # =====================================
 # Risk Zones Loader
@@ -49,6 +41,17 @@ RISK_ZONES: List[RiskZone] = []
 def load_risk_zones(filepath: str = "risk_zones.csv") -> List[RiskZone]:
     """Load risk zones from CSV file."""
     zones = []
+    
+    # Adjust path if running from backend root or elsewhere
+    if not os.path.exists(filepath):
+        # Try looking in current dir if not found (relative to where script might be)
+        # But commonly we run from backend/
+        if os.path.exists(os.path.join("backend", filepath)):
+            filepath = os.path.join("backend", filepath)
+        # Or if we are in backend/routers/ and file is in backend/
+        elif os.path.exists(os.path.join("..", filepath)):
+            filepath = os.path.join("..", filepath)
+
     if not os.path.exists(filepath):
         print(f"[RISK] {filepath} not found")
         return zones
@@ -186,9 +189,31 @@ def detect_risk_intersections(route_coords: List[Tuple[float, float]]) -> Dict[s
 # OSRM Integration
 # =====================================
 
-# =====================================
-# OSRM Integration
-# =====================================
+def _query_osrm_multi(base_url: str, coords: str, params: Dict) -> List[Dict[str, Any]]:
+    """Helper to query OSRM and return list of routes."""
+    url = f"{base_url}/{coords}"
+    r = requests.get(url, params=params, timeout=5)
+    r.raise_for_status()
+    js = r.json()
+    routes = js.get("routes", [])
+    
+    if not routes:
+        raise Exception("no_routes")
+    
+    parsed_routes = []
+    for route in routes:
+        geom = route.get("geometry", {})
+        coords_lonlat = geom.get("coordinates", [])
+        # Convert to [lat, lon]
+        coords_latlon = [[float(p[1]), float(p[0])] for p in coords_lonlat]
+        
+        parsed_routes.append({
+            "coords": coords_latlon,
+            "distance": route.get("distance", 0.0),
+            "duration": route.get("duration", 0.0)
+        })
+        
+    return parsed_routes
 
 def fetch_routes_with_alternatives(start_lat: float, start_lon: float, 
                                   end_lat: float, end_lon: float) -> List[Dict[str, Any]]:
@@ -216,37 +241,11 @@ def fetch_routes_with_alternatives(start_lat: float, start_lon: float,
         "duration": 0.0
     }]
 
-def _query_osrm_multi(base_url: str, coords: str, params: Dict) -> List[Dict[str, Any]]:
-    """Helper to query OSRM and return list of routes."""
-    url = f"{base_url}/{coords}"
-    r = requests.get(url, params=params, timeout=5)
-    r.raise_for_status()
-    js = r.json()
-    routes = js.get("routes", [])
-    
-    if not routes:
-        raise Exception("no_routes")
-    
-    parsed_routes = []
-    for route in routes:
-        geom = route.get("geometry", {})
-        coords_lonlat = geom.get("coordinates", [])
-        # Convert to [lat, lon]
-        coords_latlon = [[float(p[1]), float(p[0])] for p in coords_lonlat]
-        
-        parsed_routes.append({
-            "coords": coords_latlon,
-            "distance": route.get("distance", 0.0),
-            "duration": route.get("duration", 0.0)
-        })
-        
-    return parsed_routes
-
 # =====================================
 # API Endpoints
 # =====================================
 
-@app.get("/dynamic_route_json")
+@router.get("/dynamic_route_json")
 def dynamic_route_json(
     start_lat: float = Query(...),
     start_lon: float = Query(...),
@@ -312,7 +311,7 @@ def dynamic_route_json(
             
     return JSONResponse(response)
 
-@app.get("/risk_zones")
+@router.get("/risk_zones")
 def get_risk_zones():
     """Return all risk zones for reference."""
     zones = [
@@ -330,15 +329,3 @@ def get_risk_zones():
         "total_zones": len(zones),
         "zones": zones
     })
-
-@app.get("/health")
-def health_check():
-    """Health check endpoint."""
-    return JSONResponse({
-        "status": "ok",
-        "risk_zones_loaded": len(RISK_ZONES)
-    })
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("dynamic_route_with_risk:app", host="127.0.0.1", port=8000, reload=True)

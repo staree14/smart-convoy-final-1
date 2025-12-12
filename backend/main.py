@@ -2,7 +2,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from routers import convoy_routes, route_visualization, analytics, checkpoints, vehicle_status, risk_zones
+from routers import convoy_routes, route_visualization, analytics, checkpoints, vehicle_status, risk_zones, dynamic_route_with_risk
 from auth import auth
 import geocode_router
 
@@ -47,6 +47,7 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"]
 app.include_router(checkpoints.router, prefix="/api/checkpoints", tags=["Checkpoints"])
 app.include_router(vehicle_status.router, prefix="/api/vehicles", tags=["Vehicle Status"])
 app.include_router(risk_zones.router, prefix="/api/risk-zones", tags=["Risk Zones"])
+app.include_router(dynamic_route_with_risk.router, prefix="/api/safe-routing", tags=["Safe Routing (Risk)"])
 
 @app.get("/")
 def root():
