@@ -9,6 +9,7 @@ from geocode_router import geocode_place
 from core.dynamic_router import dynamic_reroute
 import requests
 import json
+import time
 from typing import Optional
 from pydantic import BaseModel
 
@@ -40,22 +41,45 @@ def create_convoy(convoy: Convoy, current_user: dict = Depends(get_current_user)
     cur = conn.cursor()
 
     try:
-        # Geocode places if needed
+        # Geocode places if needed (Nominatim requires 1 request/second rate limit)
         if convoy.source_place and (convoy.source_lat is None or convoy.source_lon is None):
             s = geocode_place(convoy.source_place)
             if s:
                 convoy.source_lat = s["lat"]
                 convoy.source_lon = s["lon"]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to geocode source location '{convoy.source_place}'. Please try a more specific address (e.g., 'New Delhi, India' instead of just 'Delhi')"
+                )
+            # Rate limit: wait 1 second before next geocode request
+            time.sleep(1)
 
         if convoy.destination_place and (convoy.destination_lat is None or convoy.destination_lon is None):
             d = geocode_place(convoy.destination_place)
             if d:
                 convoy.destination_lat = d["lat"]
                 convoy.destination_lon = d["lon"]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to geocode destination location '{convoy.destination_place}'. Please try a more specific address (e.g., 'Mumbai, India' instead of just 'Mumbai')"
+                )
 
         # Validate coordinates exist
         if convoy.source_lat is None or convoy.source_lon is None or convoy.destination_lat is None or convoy.destination_lon is None:
-            raise HTTPException(status_code=400, detail="Convoy must include source and destination coordinates (lat/lon).")
+            raise HTTPException(
+                status_code=400,
+                detail="Convoy must include source and destination coordinates. Either provide place names for geocoding or provide lat/lon coordinates directly."
+            )
+
+        # Validate each vehicle's load vs capacity
+        for idx, v in enumerate(convoy.vehicles, 1):
+            if v.load_weight_kg > v.capacity_kg:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Vehicle {idx} ({v.registration_number}): Load ({v.load_weight_kg:.2f} kg) exceeds capacity ({v.capacity_kg:.2f} kg). Please reduce load by {(v.load_weight_kg - v.capacity_kg):.2f} kg."
+                )
 
         # Insert convoy with created_by = user_id
         cur.execute("""
@@ -224,7 +248,8 @@ def list_convoys(current_user: dict = Depends(get_current_user)):
     try:
         cur.execute("""
             SELECT convoy_id, convoy_name, priority, source_place, destination_place,
-                   source_lat, source_lon, destination_lat, destination_lon, created_at, created_by
+                   source_lat, source_lon, destination_lat, destination_lon, created_at, created_by,
+                   status
             FROM convoys
             WHERE created_by = %s
             ORDER BY created_at DESC;
@@ -245,6 +270,7 @@ def list_convoys(current_user: dict = Depends(get_current_user)):
                 "id": rec["convoy_id"],
                 "convoy_name": rec["convoy_name"],
                 "priority": rec["priority"],
+                "status": rec.get("status", "pending"),
                 "vehicle_count": vehicle_count,
                 "total_load_kg": float(total_load),
                 "source": {"lat": rec["source_lat"], "lon": rec["source_lon"], "place": rec["source_place"]},
@@ -448,17 +474,62 @@ def suggest_merge(request: MergeRequest):
         cur.execute("SELECT load_weight_kg, capacity_kg FROM vehicles WHERE convoy_id=%s;", (request.convoy_b_id,))
         vehicles_b = cur.fetchall()
 
-        # Check destination proximity FIRST
+        # IMPROVED MERGE LOGIC: Check if destinations are close OR if B's source is "on the way"
+        # First check destination proximity
         dest_dist_km = haversine_km(
             convoy_a_rec["destination_lat"], convoy_a_rec["destination_lon"],
             convoy_b_rec["destination_lat"], convoy_b_rec["destination_lon"]
         )
 
-        if dest_dist_km > request.same_dest_radius_km:
+        destinations_close = dest_dist_km <= request.same_dest_radius_km
+
+        # NEW: Check if B's source is along A's route (or vice versa)
+        # Calculate distance from B's source to A's straight-line route
+        def point_to_line_distance(px, py, x1, y1, x2, y2):
+            """Calculate perpendicular distance from point to line segment"""
+            # Vector from line start to point
+            dx = x2 - x1
+            dy = y2 - y1
+
+            if dx == 0 and dy == 0:
+                # Line segment is a point
+                return haversine_km(y1, x1, py, px)
+
+            # Parameter t for projection onto line
+            t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)))
+
+            # Closest point on line segment
+            closest_x = x1 + t * dx
+            closest_y = y1 + t * dy
+
+            return haversine_km(closest_y, closest_x, py, px)
+
+        # Distance from B's source to A's route
+        b_source_to_a_route_km = point_to_line_distance(
+            convoy_b_rec["source_lon"], convoy_b_rec["source_lat"],
+            convoy_a_rec["source_lon"], convoy_a_rec["source_lat"],
+            convoy_a_rec["destination_lon"], convoy_a_rec["destination_lat"]
+        )
+
+        # Distance from A's source to B's route
+        a_source_to_b_route_km = point_to_line_distance(
+            convoy_a_rec["source_lon"], convoy_a_rec["source_lat"],
+            convoy_b_rec["source_lon"], convoy_b_rec["source_lat"],
+            convoy_b_rec["destination_lon"], convoy_b_rec["destination_lat"]
+        )
+
+        # Consider "on the way" if source is within 10 km of the route
+        b_on_a_route = b_source_to_a_route_km <= 10
+        a_on_b_route = a_source_to_b_route_km <= 10
+
+        # Merge is possible if either destinations are close OR one source is on the other's route
+        if not (destinations_close or b_on_a_route or a_on_b_route):
             return JSONResponse({
                 "can_merge": False,
-                "reason": f"Destinations too far apart ({dest_dist_km:.2f} km, threshold: {request.same_dest_radius_km} km)",
-                "dest_distance_km": round(dest_dist_km, 2)
+                "reason": f"Destinations too far ({dest_dist_km:.2f} km > {request.same_dest_radius_km} km) and routes don't intersect",
+                "dest_distance_km": round(dest_dist_km, 2),
+                "b_distance_to_a_route_km": round(b_source_to_a_route_km, 2),
+                "a_distance_to_b_route_km": round(a_source_to_b_route_km, 2)
             })
 
         # Calculate capacity and load
@@ -491,11 +562,29 @@ def suggest_merge(request: MergeRequest):
                 r = requests.get(url, timeout=10)
                 r.raise_for_status()
                 j = r.json()
+
+                # Check for OSRM errors
+                if j.get("code") != "Ok":
+                    print(f"[MERGE] OSRM error: {j.get('code')} - {j.get('message')}")
+                    return None, None
+
                 if "routes" in j and j["routes"]:
-                    return j["routes"][0].get("duration"), j["routes"][0].get("distance")
-            except Exception:
+                    duration = j["routes"][0].get("duration")
+                    distance = j["routes"][0].get("distance")
+                    print(f"[MERGE] OSRM success: {duration}s, {distance}m for {len(points)} points")
+                    return duration, distance
+                else:
+                    print(f"[MERGE] OSRM returned no routes for {len(points)} points")
+                    return None, None
+            except requests.exceptions.Timeout:
+                print(f"[MERGE] OSRM timeout for URL: {url}")
                 return None, None
-            return None, None
+            except requests.exceptions.RequestException as e:
+                print(f"[MERGE] OSRM request failed: {e}")
+                return None, None
+            except Exception as e:
+                print(f"[MERGE] OSRM unexpected error: {e}")
+                return None, None
 
         # Scenario A picks up B
         direct_dur_A, _ = osrm_duration([
@@ -510,6 +599,21 @@ def suggest_merge(request: MergeRequest):
         extra_A = None
         if direct_dur_A is not None and pickup_dur_A is not None:
             extra_A = (pickup_dur_A - direct_dur_A) / 60.0
+        elif a_can_absorb_b:
+            # Fallback: estimate using Haversine
+            print("[MERGE] Using Haversine fallback for A picks B scenario")
+            direct_km = haversine_km(
+                convoy_a_rec["source_lat"], convoy_a_rec["source_lon"],
+                convoy_a_rec["destination_lat"], convoy_a_rec["destination_lon"]
+            )
+            detour_km = (
+                haversine_km(convoy_a_rec["source_lat"], convoy_a_rec["source_lon"],
+                           convoy_b_rec["source_lat"], convoy_b_rec["source_lon"]) +
+                haversine_km(convoy_b_rec["source_lat"], convoy_b_rec["source_lon"],
+                           convoy_a_rec["destination_lat"], convoy_a_rec["destination_lon"])
+            )
+            extra_km = detour_km - direct_km
+            extra_A = (extra_km / 50.0) * 60.0  # Assume 50 km/h avg speed
 
         # Scenario B picks up A
         direct_dur_B, _ = osrm_duration([
@@ -524,6 +628,21 @@ def suggest_merge(request: MergeRequest):
         extra_B = None
         if direct_dur_B is not None and pickup_dur_B is not None:
             extra_B = (pickup_dur_B - direct_dur_B) / 60.0
+        elif b_can_absorb_a:
+            # Fallback: estimate using Haversine
+            print("[MERGE] Using Haversine fallback for B picks A scenario")
+            direct_km = haversine_km(
+                convoy_b_rec["source_lat"], convoy_b_rec["source_lon"],
+                convoy_b_rec["destination_lat"], convoy_b_rec["destination_lon"]
+            )
+            detour_km = (
+                haversine_km(convoy_b_rec["source_lat"], convoy_b_rec["source_lon"],
+                           convoy_a_rec["source_lat"], convoy_a_rec["source_lon"]) +
+                haversine_km(convoy_a_rec["source_lat"], convoy_a_rec["source_lon"],
+                           convoy_b_rec["destination_lat"], convoy_b_rec["destination_lon"])
+            )
+            extra_km = detour_km - direct_km
+            extra_B = (extra_km / 50.0) * 60.0  # Assume 50 km/h avg speed
 
         # Find best scenario
         candidates = []
@@ -533,11 +652,28 @@ def suggest_merge(request: MergeRequest):
             candidates.append(("B_picks_A", extra_B))
 
         if not candidates:
+            # Build detailed error message
+            error_parts = []
+            if not a_can_absorb_b and not b_can_absorb_a:
+                error_parts.append("No convoy has enough spare capacity")
+            if a_can_absorb_b and extra_A is None:
+                error_parts.append("Failed to calculate route for A picking up B (OSRM error)")
+            if b_can_absorb_a and extra_B is None:
+                error_parts.append("Failed to calculate route for B picking up A (OSRM error)")
+
+            reason = "; ".join(error_parts) if error_parts else "Could not calculate detour durations"
+
             return JSONResponse({
                 "can_merge": False,
-                "reason": "Could not calculate detour durations or no capacity",
-                "extra_A": extra_A,
-                "extra_B": extra_B
+                "reason": reason,
+                "debug": {
+                    "a_can_absorb_b": a_can_absorb_b,
+                    "b_can_absorb_a": b_can_absorb_a,
+                    "extra_A": extra_A,
+                    "extra_B": extra_B,
+                    "convoy_a_coords": f"({convoy_a_rec['source_lat']}, {convoy_a_rec['source_lon']}) -> ({convoy_a_rec['destination_lat']}, {convoy_a_rec['destination_lon']})",
+                    "convoy_b_coords": f"({convoy_b_rec['source_lat']}, {convoy_b_rec['source_lon']}) -> ({convoy_b_rec['destination_lat']}, {convoy_b_rec['destination_lon']})"
+                }
             })
 
         best = min(candidates, key=lambda x: x[1])
@@ -546,12 +682,93 @@ def suggest_merge(request: MergeRequest):
         if extra_min <= request.max_extra_minutes:
             fuel_savings_liters = dest_dist_km * 0.3
 
+            # Build concise merge reason with convoy names
+            convoy_a_name = convoy_a_rec["convoy_name"]
+            convoy_b_name = convoy_b_rec["convoy_name"]
+
+            # Explain scenario in human-readable terms
+            if scenario == "A_picks_B":
+                scenario_text = f"'{convoy_a_name}' picks up '{convoy_b_name}'"
+                pickup_convoy = convoy_a_name
+                picked_convoy = convoy_b_name
+            else:
+                scenario_text = f"'{convoy_b_name}' picks up '{convoy_a_name}'"
+                pickup_convoy = convoy_b_name
+                picked_convoy = convoy_a_name
+
+            # Build concise merge reasons
+            merge_reasons = []
+            if destinations_close:
+                merge_reasons.append(f"destinations close ({dest_dist_km:.1f} km apart)")
+            if b_on_a_route or a_on_b_route:
+                detour = b_source_to_a_route_km if b_on_a_route else a_source_to_b_route_km
+                merge_reasons.append(f"'{picked_convoy}' on '{pickup_convoy}''s route ({detour:.1f} km detour)")
+
+            reason_text = " AND ".join(merge_reasons) if merge_reasons else "routes compatible"
+            full_reason = f"{scenario_text} feasible with extra time {extra_min:.1f} min. Merge suggested because: {reason_text}. Benefits: Save ~{fuel_savings_liters:.1f}L fuel, consolidate resources."
+
+            # Save merge suggestion to database (check for duplicates first)
+            merge_id = None
+            try:
+                # Check if this merge suggestion already exists
+                # Check both directions: (A,B) and (B,A) are considered the same merge
+                cur.execute("""
+                    SELECT merge_id FROM merge_history
+                    WHERE ((convoy_a_id = %s AND convoy_b_id = %s)
+                           OR (convoy_a_id = %s AND convoy_b_id = %s))
+                          AND status = 'suggested'
+                    LIMIT 1;
+                """, (request.convoy_a_id, request.convoy_b_id, request.convoy_b_id, request.convoy_a_id))
+                existing_merge = cur.fetchone()
+
+                if existing_merge:
+                    merge_id = existing_merge["merge_id"]
+                    print(f"[MERGE] Merge suggestion already exists: merge_id={merge_id}")
+                else:
+                    # Insert new merge suggestion
+                    cur.execute("""
+                        INSERT INTO merge_history
+                        (convoy_a_id, convoy_b_id, merged_into, merge_type, distance_saved_km,
+                         fuel_saved_liters, cost_saved_inr, detour_minutes, merged_by, status, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING merge_id;
+                    """, (
+                        request.convoy_a_id,
+                        request.convoy_b_id,
+                        request.convoy_a_id if scenario == "A_picks_B" else request.convoy_b_id,
+                        'pickup',
+                        0.0,  # distance_saved_km - will calculate after actual merge
+                        fuel_savings_liters,
+                        fuel_savings_liters * 150.0,  # cost_saved_inr
+                        extra_min,
+                        None,  # merged_by - no user yet, just suggested
+                        'suggested',  # status
+                        reason_text
+                    ))
+                    merge_record = cur.fetchone()
+                    merge_id = merge_record["merge_id"] if merge_record else None
+                    print(f"[MERGE] Saved NEW suggestion merge_id={merge_id}: {scenario_text}")
+
+                conn.commit()
+            except Exception as e:
+                print(f"[MERGE] Failed to save suggestion: {e}")
+                conn.rollback()
+
             return JSONResponse({
                 "can_merge": True,
-                "reason": f"{scenario} feasible with extra time {extra_min:.1f} min",
+                "reason": full_reason,
                 "scenario": scenario,
+                "scenario_readable": scenario_text,
+                "convoy_a_name": convoy_a_name,
+                "convoy_b_name": convoy_b_name,
+                "merge_id": merge_id,
                 "extra_minutes": round(extra_min, 2),
                 "dest_distance_km": round(dest_dist_km, 2),
+                "b_distance_to_a_route_km": round(b_source_to_a_route_km, 2),
+                "a_distance_to_b_route_km": round(a_source_to_b_route_km, 2),
+                "destinations_close": destinations_close,
+                "b_on_a_route": b_on_a_route,
+                "a_on_b_route": a_on_b_route,
                 "fuel_savings_liters": round(fuel_savings_liters, 2),
                 "convoy_a_spare_kg": round(avail_a, 2),
                 "convoy_b_spare_kg": round(avail_b, 2)
@@ -578,6 +795,71 @@ def suggest_merge(request: MergeRequest):
 # ----------------------------
 # Get convoy route with optimized path
 # ----------------------------
+@router.patch("/{convoy_id}/status")
+def update_convoy_status(
+    convoy_id: int,
+    status: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Update convoy status: pending, en_route, completed, cancelled
+    """
+    user_id = current_user["user_id"]
+
+    valid_statuses = ["pending", "en_route", "completed", "cancelled"]
+    if status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {valid_statuses}"
+        )
+
+    conn = get_connection()
+    if not conn:
+        raise HTTPException(status_code=500, detail="Database connection failed")
+
+    cur = conn.cursor()
+    try:
+        # Verify convoy ownership
+        cur.execute("""
+            SELECT convoy_name, created_by FROM convoys
+            WHERE convoy_id = %s;
+        """, (convoy_id,))
+        convoy = cur.fetchone()
+
+        if not convoy:
+            raise HTTPException(status_code=404, detail="Convoy not found")
+
+        if convoy["created_by"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Update convoy status
+        cur.execute("""
+            UPDATE convoys
+            SET status = %s
+            WHERE convoy_id = %s
+            RETURNING convoy_id, convoy_name, status;
+        """, (status, convoy_id))
+
+        updated_convoy = cur.fetchone()
+        conn.commit()
+
+        return JSONResponse({
+            "status": "success",
+            "message": f"Convoy '{convoy['convoy_name']}' status updated to '{status}'",
+            "convoy_id": convoy_id,
+            "new_status": status
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
 @router.get("/{convoy_id}/route")
 def get_convoy_route(convoy_id: int, current_user: dict = Depends(get_current_user)):
     """
