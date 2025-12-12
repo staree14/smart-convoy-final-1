@@ -4,32 +4,33 @@ import Navbar from '../components/Navbar';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Plus, MapPin, Package, AlertCircle, GitMerge, X, CheckCircle, Truck, Flag } from 'lucide-react';
+import '../styles/dashboard.css';
 
 // --- Merge Suggestion Panel Component (Overlay) ---
 const MergeSuggestionBox = ({ convoys, selectedA, setSelectedA, selectedB, setSelectedB, suggestMerge, merging, mergeResult, onClose }) => (
-  <div className="bg-slate-800/95 border border-slate-700 rounded-lg p-4 sm:p-5 backdrop-blur-sm">
-    <div className='flex justify-between items-center mb-4'>
-      <h3 className="text-white text-base sm:text-lg font-bold flex items-center gap-2">
+  <div className="merge-suggestion-container">
+    <div className='merge-header'>
+      <h3 className="merge-title">
         <GitMerge className="w-5 h-5 text-blue-400" /> Merge Suggestion
       </h3>
       <button
         onClick={onClose}
-        className="text-slate-400 hover:text-white transition-colors p-1"
+        className="close-panel-btn"
         title="Close Panel"
       >
         <X className="w-5 h-5" />
       </button>
     </div>
 
-    <p className="text-slate-400 text-xs sm:text-sm mb-4">Choose two convoys to evaluate merging.</p>
+    <p className="merge-desc">Choose two convoys to evaluate merging.</p>
 
     <div className="space-y-3">
-      <div>
-        <label className="text-slate-300 text-xs sm:text-sm mb-1.5 block">Convoy A</label>
+      <div className="merge-form-group">
+        <label className="merge-label">Convoy A</label>
         <select
           value={selectedA || ''}
           onChange={(e) => setSelectedA(parseInt(e.target.value) || null)}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+          className="merge-select"
         >
           <option value="">Select convoy A</option>
           {convoys.map((c) => (
@@ -38,12 +39,12 @@ const MergeSuggestionBox = ({ convoys, selectedA, setSelectedA, selectedB, setSe
         </select>
       </div>
 
-      <div>
-        <label className="text-slate-300 text-xs sm:text-sm mb-1.5 block">Convoy B</label>
+      <div className="merge-form-group">
+        <label className="merge-label">Convoy B</label>
         <select
           value={selectedB || ''}
           onChange={(e) => setSelectedB(parseInt(e.target.value) || null)}
-          className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+          className="merge-select"
         >
           <option value="">Select convoy B</option>
           {convoys.map((c) => (
@@ -55,17 +56,17 @@ const MergeSuggestionBox = ({ convoys, selectedA, setSelectedA, selectedB, setSe
       <button
         onClick={suggestMerge}
         disabled={!selectedA || !selectedB || merging || selectedA === selectedB}
-        className="w-full mt-2 px-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md disabled:opacity-60 transition-colors"
+        className="suggest-btn"
       >
         {merging ? 'Checking...' : 'Suggest Merge'}
       </button>
     </div>
 
     {mergeResult && (
-      <div className="mt-4 pt-4 border-t border-slate-700 text-sm">
-        <p className={`font-semibold ${mergeResult.can_merge ? 'text-green-400' : 'text-yellow-400'}`}>{mergeResult.reason}</p>
+      <div className="merge-result">
+        <p className={`font-semibold ${mergeResult.can_merge ? 'merge-result-success' : 'merge-result-fail'}`}>{mergeResult.reason}</p>
         {mergeResult.can_merge && (
-          <div className="text-slate-300 text-xs sm:text-sm mt-3 space-y-1.5">
+          <div className="merge-details">
             <div>Scenario: <span className="text-white">{mergeResult.scenario}</span></div>
             <div>Extra Time: <span className="text-white">{mergeResult.extra_minutes} min</span></div>
             <div>Dest Distance: <span className="text-white">{mergeResult.dest_distance_km} km</span></div>
@@ -424,22 +425,22 @@ export default function Dashboard() {
 
   const getPriorityColor = (priority) => {
     const colors = {
-      critical: 'text-red-400 bg-red-500/10 border-red-500/20',
-      high: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
-      medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-      low: 'text-green-400 bg-green-500/10 border-green-500/20',
+      critical: 'priority-critical',
+      high: 'priority-high',
+      medium: 'priority-medium',
+      low: 'priority-low',
     };
-    return colors[priority] || colors.medium;
+    return colors[priority] || 'priority-medium';
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-      en_route: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-      completed: 'text-green-400 bg-green-500/10 border-green-500/30',
-      cancelled: 'text-red-400 bg-red-500/10 border-red-500/30',
+      pending: 'status-pending-badge',
+      en_route: 'status-route-badge',
+      completed: 'status-done-badge',
+      cancelled: 'status-cancelled-badge',
     };
-    return colors[status] || colors.pending;
+    return colors[status] || 'status-pending-badge';
   };
 
   const getStatusIcon = (status) => {
@@ -453,168 +454,165 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="dashboard-container">
       <Navbar setShowMergeSuggestion={setShowMergePanel} />
       {/* Main Container with proper padding and max-width */}
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="dashboard-main">
 
         {/* Header Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="dashboard-header">
+          <div className="header-content">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Dashboard</h1>
-              <p className="text-slate-400 text-sm sm:text-base">Manage and track your convoys in real-time</p>
+              <h1 className="dashboard-title">Dashboard</h1>
+              <p className="dashboard-subtitle">Manage and track your convoys in real-time</p>
             </div>
             <button
               onClick={() => navigate('/create-convoy')}
-              className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-lg hover:shadow-xl"
+              className="new-convoy-btn"
             >
               <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">New Convoy</span>
-              <span className="sm:hidden">New</span>
+              <span className="btn-text-desktop">New Convoy</span>
+              <span className="btn-text-mobile">New</span>
             </button>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="mb-6 sm:mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-5 sm:p-6 hover:bg-slate-800/80 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs sm:text-sm mb-2">Active Convoys</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-white">{convoys.length}</p>
-                </div>
-                <MapPin className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400 opacity-50" />
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div>
+                <p className="stat-label">Active Convoys</p>
+                <p className="stat-value">{convoys.length}</p>
               </div>
+              <MapPin className="stat-icon stat-icon-blue" />
             </div>
+          </div>
 
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-5 sm:p-6 hover:bg-slate-800/80 transition-colors">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs sm:text-sm mb-2">Total Vehicles</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-white">{totalVehicles}</p>
-                </div>
-                <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-orange-400 opacity-50" />
+          <div className="stat-card">
+            <div className="stat-card-content">
+              <div>
+                <p className="stat-label">Total Vehicles</p>
+                <p className="stat-value">{totalVehicles}</p>
               </div>
+              <AlertCircle className="stat-icon stat-icon-orange" />
             </div>
+          </div>
 
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-5 sm:p-6 hover:bg-slate-800/80 transition-colors sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-400 text-xs sm:text-sm mb-2">Total Load</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-white">{totalLoad.toLocaleString()} kg</p>
-                </div>
-                <Package className="w-8 h-8 sm:w-10 sm:h-10 text-green-400 opacity-50" />
+          <div className="stat-card stat-card-wide">
+            <div className="stat-card-content">
+              <div>
+                <p className="stat-label">Total Load</p>
+                <p className="stat-value">{totalLoad.toLocaleString()} kg</p>
               </div>
+              <Package className="stat-icon stat-icon-green" />
             </div>
           </div>
         </div>
 
         {/* Performance Metrics Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-6 lg:p-8">
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">
+        <div className="metrics-section">
+          <div className="metrics-container">
+            <h2 className="metrics-title">
               System Performance Metrics
             </h2>
 
             {/* Top-Level Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+            <div className="top-metrics-grid">
               {/* ROI Metric */}
-              <div className="bg-gradient-to-br from-green-900 to-green-700 p-5 sm:p-6 lg:p-7 rounded-lg shadow-lg">
-                <div className="text-green-300 text-xs sm:text-sm font-medium mb-2">Financial ROI</div>
-                <div className="text-white text-4xl sm:text-5xl lg:text-6xl font-bold mb-2">8X</div>
-                <div className="text-green-200 text-xs sm:text-sm">
+              <div className="metric-card-highlight metric-roi">
+                <div className="metric-highlight-label label-roi">Financial ROI</div>
+                <div className="metric-highlight-value">8X</div>
+                <div className="metric-highlight-subtext subtext-roi">
                   ₹8 saved for every ₹1 invested
                 </div>
               </div>
 
               {/* Delay Reduction */}
-              <div className="bg-gradient-to-br from-blue-900 to-blue-700 p-5 sm:p-6 lg:p-7 rounded-lg shadow-lg">
-                <div className="text-blue-300 text-xs sm:text-sm font-medium mb-2">Delay Reduction</div>
-                <div className="text-white text-4xl sm:text-5xl lg:text-6xl font-bold mb-2">-40%</div>
-                <div className="text-blue-200 text-xs sm:text-sm">
+              <div className="metric-card-highlight metric-delay">
+                <div className="metric-highlight-label label-delay">Delay Reduction</div>
+                <div className="metric-highlight-value">-40%</div>
+                <div className="metric-highlight-subtext subtext-delay">
                   Average convoy delays reduced
                 </div>
               </div>
 
               {/* Efficiency Gain */}
-              <div className="bg-gradient-to-br from-purple-900 to-purple-700 p-5 sm:p-6 lg:p-7 rounded-lg shadow-lg sm:col-span-2 lg:col-span-1">
-                <div className="text-purple-300 text-xs sm:text-sm font-medium mb-2">Fleet Efficiency</div>
-                <div className="text-white text-4xl sm:text-5xl lg:text-6xl font-bold mb-2">+15%</div>
-                <div className="text-purple-200 text-xs sm:text-sm">
+              <div className="metric-card-highlight metric-efficiency metric-card-wide">
+                <div className="metric-highlight-label label-efficiency">Fleet Efficiency</div>
+                <div className="metric-highlight-value">+15%</div>
+                <div className="metric-highlight-subtext subtext-efficiency">
                   More trips per vehicle per month
                 </div>
               </div>
             </div>
 
             {/* Detailed Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              <div className="border border-slate-700 p-4 rounded-lg bg-slate-900/50 hover:bg-slate-900/80 transition-colors">
-                <div className="text-slate-400 text-xs mb-1">Total Distance Saved</div>
-                <div className="text-white text-xl sm:text-2xl font-bold">
+            <div className="detailed-stats-grid">
+              <div className="detailed-stat-item">
+                <div className="detailed-stat-label">Total Distance Saved</div>
+                <div className="detailed-stat-value">
                   {metricsLoading ? '...' : metrics.total_distance_saved_km.toFixed(1)} km
                 </div>
-                <div className="text-green-400 text-xs mt-1">All time</div>
+                <div className="detailed-stat-sub sub-green">All time</div>
               </div>
 
-              <div className="border border-slate-700 p-4 rounded-lg bg-slate-900/50 hover:bg-slate-900/80 transition-colors">
-                <div className="text-slate-400 text-xs mb-1">Fuel Saved</div>
-                <div className="text-white text-xl sm:text-2xl font-bold">
+              <div className="detailed-stat-item">
+                <div className="detailed-stat-label">Fuel Saved</div>
+                <div className="detailed-stat-value">
                   {metricsLoading ? '...' : metrics.total_fuel_saved_liters.toFixed(1)} L
                 </div>
-                <div className="text-green-400 text-xs mt-1">
+                <div className="detailed-stat-sub sub-green">
                   ≈ ₹{metricsLoading ? '...' : metrics.total_cost_saved_inr.toLocaleString()}
                 </div>
               </div>
 
-              <div className="border border-slate-700 p-4 rounded-lg bg-slate-900/50 hover:bg-slate-900/80 transition-colors">
-                <div className="text-slate-400 text-xs mb-1">Conflicts Prevented</div>
-                <div className="text-white text-xl sm:text-2xl font-bold">
+              <div className="detailed-stat-item">
+                <div className="detailed-stat-label">Conflicts Prevented</div>
+                <div className="detailed-stat-value">
                   {metricsLoading ? '...' : metrics.conflicts_prevented}
                 </div>
-                <div className="text-blue-400 text-xs mt-1">Route overlaps avoided</div>
+                <div className="detailed-stat-sub sub-blue">Route overlaps avoided</div>
               </div>
 
-              <div className="border border-slate-700 p-4 rounded-lg bg-slate-900/50 hover:bg-slate-900/80 transition-colors">
-                <div className="text-slate-400 text-xs mb-1">Successful Merges</div>
-                <div className="text-white text-xl sm:text-2xl font-bold">
+              <div className="detailed-stat-item">
+                <div className="detailed-stat-label">Successful Merges</div>
+                <div className="detailed-stat-value">
                   {metricsLoading ? '...' : metrics.successful_merges}
                 </div>
-                <div className="text-purple-400 text-xs mt-1">Convoys consolidated</div>
+                <div className="detailed-stat-sub sub-purple">Convoys consolidated</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Main content area: two-column layout (map left, controls & convoys right) */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
+        <div className="main-content-area">
+          <div className="content-flex-container">
 
             {/* Left: Map (slightly smaller on desktop) */}
-            <div className="lg:w-2/3 w-full bg-slate-900 rounded-lg border border-slate-800 shadow-xl overflow-hidden">
-              {/* Map controls */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-slate-700 bg-slate-800/50">
-                <h3 className="text-white font-semibold text-base sm:text-lg">Live Map</h3>
-                <button
-                  onClick={() => setShowRiskZones(!showRiskZones)}
-                  className={`flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all ${showRiskZones
-                    ? 'bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30'
-                    : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600'
-                    }`}
-                >
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">{showRiskZones ? `Hide Risk Zones (${riskZones.length})` : `Show Risk Zones (${riskZones.length})`}</span>
-                  <span className="sm:hidden">{showRiskZones ? 'Hide Zones' : 'Show Zones'}</span>
-                </button>
+            <div className="left-panel-map">
+              <div className="map-card">
+                {/* Map controls */}
+                <div className="map-header">
+                  <h3 className="map-title">Live Map</h3>
+                  <button
+                    onClick={() => setShowRiskZones(!showRiskZones)}
+                    className={`toggle-risk-btn ${showRiskZones ? 'toggle-risk-active' : 'toggle-risk-inactive'}`}
+                  >
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="btn-text-desktop">{showRiskZones ? `Hide Risk Zones (${riskZones.length})` : `Show Risk Zones (${riskZones.length})`}</span>
+                    <span className="btn-text-mobile">{showRiskZones ? 'Hide Zones' : 'Show Zones'}</span>
+                  </button>
+                </div>
+                <div id="map" className="map-display" />
               </div>
-              <div id="map" className="w-full h-[400px] sm:h-[500px] lg:h-[600px] bg-slate-900" />
             </div>
 
             {/* Right: Merge suggestion (top) and Active Convoys (middle) + summary (bottom) */}
-            <div className="lg:w-1/3 w-full flex flex-col gap-6">
+            <div className="right-panel-controls">
               {showMergePanel && (
-                <div className="lg:sticky lg:top-20">
+                <div className="merge-box-sticky">
                   <MergeSuggestionBox
                     convoys={convoys}
                     selectedA={selectedA}
@@ -629,14 +627,14 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden shadow-xl flex-1">
-                <div className="px-4 sm:px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
-                  <h2 className="text-base sm:text-lg font-semibold text-white">Active Convoys</h2>
-                  <div className="flex items-center gap-3">
-                    <span className="text-slate-400 text-xs sm:text-sm">{convoys.length} total</span>
+              <div className="active-convoys-card">
+                <div className="active-convoys-header">
+                  <h2 className="active-convoys-title">Active Convoys</h2>
+                  <div className="refresh-group">
+                    <span className="convoy-count">{convoys.length} total</span>
                     <button
                       onClick={fetchConvoys}
-                      className="text-slate-400 hover:text-white text-xs sm:text-sm transition-colors"
+                      className="refresh-btn"
                       title="Refresh convoys"
                     >
                       Refresh
@@ -644,7 +642,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="divide-y divide-slate-700 max-h-[600px] overflow-auto">
+                <div className="convoys-list">
                   {loading ? (
                     <div className="p-8 text-center text-slate-400">Loading convoys...</div>
                   ) : convoys.length === 0 ? (
@@ -667,11 +665,11 @@ export default function Dashboard() {
                       return (
                         <div
                           key={convoy.id}
-                          className="p-4 sm:p-5 hover:bg-slate-700/50 transition-colors"
+                          className="convoy-list-item"
                         >
-                          <div className="flex gap-3 items-start mb-3">
+                          <div className="convoy-item-inner">
                             {/* Checkbox for route display */}
-                            <div className="pt-1">
+                            <div className="route-checkbox-container">
                               <input
                                 type="checkbox"
                                 checked={isSelected}
@@ -679,7 +677,7 @@ export default function Dashboard() {
                                   e.stopPropagation();
                                   handleConvoyCheckbox(convoy.id, e.target.checked);
                                 }}
-                                className="w-4 h-4 rounded border-slate-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-800 cursor-pointer"
+                                className="route-checkbox"
                                 style={{ accentColor: isSelected ? routeColor : undefined }}
                                 title="Show route on map"
                                 disabled={isLoadingRoute}
@@ -687,60 +685,60 @@ export default function Dashboard() {
                             </div>
 
                             {/* Convoy info - clickable to view details */}
-                            <div className="flex-1">
+                            <div className="convoy-info-block">
                               <div
                                 onClick={() => navigate(`/route/${convoy.id}`)}
                                 className="cursor-pointer mb-3"
                               >
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h3 className="text-white font-semibold text-sm sm:text-base">{convoy.convoy_name}</h3>
+                                <div className="convoy-header-row">
+                                  <div className="convoy-name-group">
+                                    <div className="convoy-name-row">
+                                      <h3 className="convoy-name-text">{convoy.convoy_name}</h3>
                                       {isLoadingRoute && (
-                                        <span className="text-xs text-slate-400 italic">Loading...</span>
+                                        <span className="loading-text">Loading...</span>
                                       )}
                                     </div>
-                                    <div className="bg-slate-900/50 rounded px-3 py-2 mb-2 border border-slate-700">
-                                      <div className="flex items-center gap-2 text-xs">
-                                        <span className="text-green-400 font-medium truncate">{convoy.source?.place || 'Source'}</span>
+                                    <div className="route-box">
+                                      <div className="route-text">
+                                        <span className="place-source-sm">{convoy.source?.place || 'Source'}</span>
                                         <span className="text-slate-600">→</span>
-                                        <span className="text-red-400 font-medium truncate">{convoy.destination?.place || 'Destination'}</span>
+                                        <span className="place-dest-sm">{convoy.destination?.place || 'Destination'}</span>
                                       </div>
                                     </div>
-                                    <div className="flex gap-3 text-xs sm:text-sm text-slate-400 mb-2">
+                                    <div className="convoy-metrics-row">
                                       <span>🚚 {convoy.vehicle_count}</span>
                                       <span>📦 {convoy.total_load_kg} kg</span>
                                     </div>
                                     {/* Status Badge */}
-                                    <div className="flex items-center gap-2">
-                                      <div className={`px-2 py-1 rounded-full border text-xs font-medium flex items-center gap-1 ${getStatusColor(convoyStatus)}`}>
+                                    <div className="status-badge-row">
+                                      <div className={`current-status-badge ${getStatusColor(convoyStatus)}`}>
                                         {getStatusIcon(convoyStatus)}
                                         <span className="capitalize">{convoyStatus.replace('_', ' ')}</span>
                                       </div>
                                     </div>
                                   </div>
-                                  <div className={`px-2 py-1 rounded-full border text-xs font-medium ${getPriorityColor(convoy.priority)}`}>
+                                  <div className={`priority-badge-sm ${getPriorityColor(convoy.priority)}`}>
                                     {convoy.priority}
                                   </div>
                                 </div>
                               </div>
 
                               {/* Status Change Buttons */}
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="status-actions-grid">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     updateConvoyStatus(convoy.id, 'pending');
                                   }}
                                   disabled={convoyStatus === 'pending'}
-                                  className={`px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${convoyStatus === 'pending'
-                                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-not-allowed'
-                                    : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/30'
+                                  className={`status-action-btn ${convoyStatus === 'pending'
+                                    ? 'status-btn-pending-active'
+                                    : 'status-btn-pending-inactive'
                                     }`}
                                   title="Mark as Pending"
                                 >
                                   <AlertCircle className="w-3 h-3" />
-                                  <span className="hidden sm:inline">Pending</span>
+                                  <span className="btn-text-desktop">Pending</span>
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -748,14 +746,14 @@ export default function Dashboard() {
                                     updateConvoyStatus(convoy.id, 'en_route');
                                   }}
                                   disabled={convoyStatus === 'en_route'}
-                                  className={`px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${convoyStatus === 'en_route'
-                                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 cursor-not-allowed'
-                                    : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-blue-500/10 hover:text-blue-400 hover:border-blue-500/30'
+                                  className={`status-action-btn ${convoyStatus === 'en_route'
+                                    ? 'status-btn-route-active'
+                                    : 'status-btn-route-inactive'
                                     }`}
                                   title="Mark as En Route"
                                 >
                                   <Truck className="w-3 h-3" />
-                                  <span className="hidden sm:inline">Route</span>
+                                  <span className="btn-text-desktop">Route</span>
                                 </button>
                                 <button
                                   onClick={(e) => {
@@ -763,14 +761,14 @@ export default function Dashboard() {
                                     updateConvoyStatus(convoy.id, 'completed');
                                   }}
                                   disabled={convoyStatus === 'completed'}
-                                  className={`px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1 ${convoyStatus === 'completed'
-                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-not-allowed'
-                                    : 'bg-slate-700 text-slate-300 border border-slate-600 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
+                                  className={`status-action-btn ${convoyStatus === 'completed'
+                                    ? 'status-btn-done-active'
+                                    : 'status-btn-done-inactive'
                                     }`}
                                   title="Mark as Completed"
                                 >
                                   <CheckCircle className="w-3 h-3" />
-                                  <span className="hidden sm:inline">Done</span>
+                                  <span className="btn-text-desktop">Done</span>
                                 </button>
                               </div>
                             </div>
@@ -784,19 +782,19 @@ export default function Dashboard() {
 
               {/* Route Legend - only show when routes are selected */}
               {selectedConvoyIds.size > 0 && (
-                <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-5 shadow-lg">
-                  <h3 className="text-white font-semibold mb-3 text-sm sm:text-base">Route Legend</h3>
+                <div className="legend-box">
+                  <h3 className="legend-title">Route Legend</h3>
                   <div className="space-y-2">
                     {Array.from(selectedConvoyIds).map((convoyId, index) => {
                       const convoy = convoys.find(c => c.id === convoyId);
                       const color = routeColors[index % routeColors.length];
                       return (
-                        <div key={convoyId} className="flex items-center gap-2 sm:gap-3">
+                        <div key={convoyId} className="legend-item">
                           <div
-                            className="w-8 sm:w-10 h-1 rounded-full flex-shrink-0"
+                            className="legend-color-bar"
                             style={{ backgroundColor: color }}
                           />
-                          <span className="text-slate-300 text-xs sm:text-sm truncate flex-1">
+                          <span className="legend-text">
                             {convoy?.convoy_name || `Convoy ${convoyId}`}
                           </span>
                         </div>
@@ -806,8 +804,8 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 sm:p-5 shadow-lg">
-                <h3 className="text-white font-semibold mb-3 text-sm sm:text-base">Convoy Summary</h3>
+              <div className="summary-box">
+                <h3 className="summary-title">Convoy Summary</h3>
                 <div className="space-y-2">
                   <p className="text-slate-400 text-xs sm:text-sm">Total Vehicles: <span className="text-white font-medium">{totalVehicles}</span></p>
                   <p className="text-slate-400 text-xs sm:text-sm">Total Load: <span className="text-white font-medium">{totalLoad.toLocaleString()} kg</span></p>

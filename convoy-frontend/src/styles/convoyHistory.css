@@ -1,0 +1,676 @@
+/* Convoy History Page Styles */
+
+.history-container {
+    min-height: 100vh;
+    background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
+    /* from-slate-900 via-slate-800 to-slate-900 */
+    color: white;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.history-main {
+    width: 100%;
+    max-width: 80rem;
+    /* max-w-7xl */
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+    /* px-6 py-12 */
+}
+
+/* Header */
+.history-header {
+    margin-bottom: 1.5rem;
+    /* mb-6 */
+}
+
+.history-title {
+    font-size: 1.875rem;
+    /* text-3xl */
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+    /* mb-2 */
+}
+
+.history-subtitle {
+    color: #94a3b8;
+    /* text-slate-400 */
+}
+
+/* Filters */
+.filters-container {
+    display: flex;
+    gap: 0.5rem;
+    /* gap-2 */
+    margin-bottom: 2rem;
+    /* mb-8 */
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.filter-btn {
+    padding: 0.5rem 1rem;
+    /* px-4 py-2 */
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    /* text-sm */
+    white-space: nowrap;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.filter-btn-active {
+    background-color: #2563eb;
+    /* bg-blue-600 */
+    color: white;
+}
+
+.filter-btn-inactive {
+    background-color: #1e293b;
+    /* bg-slate-800 */
+    color: #cbd5e1;
+    /* text-slate-300 */
+    border-color: #334155;
+    /* border-slate-700 */
+}
+
+.filter-btn-inactive:hover {
+    background-color: #334155;
+    /* hover:bg-slate-700 */
+}
+
+/* Grid */
+.convoys-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    /* gap-4 */
+}
+
+@media (min-width: 768px) {
+    .convoys-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Empty States */
+.history-loading,
+.history-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem 0;
+    /* py-12 */
+}
+
+.history-loading {
+    color: #94a3b8;
+    /* text-slate-400 */
+}
+
+.history-empty-text {
+    color: #94a3b8;
+    /* text-slate-400 */
+    margin-bottom: 1rem;
+}
+
+.create-first-convoy-btn {
+    color: #60a5fa;
+    /* text-blue-400 */
+    font-size: 0.875rem;
+    /* text-sm */
+    font-weight: 500;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.create-first-convoy-btn:hover {
+    color: #93c5fd;
+    /* hover:text-blue-300 */
+}
+
+/* Convoy Card */
+.convoy-card {
+    background-color: #1e293b;
+    /* bg-slate-800 */
+    border-radius: 0.5rem;
+    border: 1px solid #334155;
+    /* border-slate-700 */
+    transition: border-color 0.2s;
+}
+
+.convoy-card:hover {
+    border-color: #475569;
+    /* hover:border-slate-600 */
+}
+
+.convoy-card-content {
+    padding: 1.5rem;
+    /* p-6 */
+}
+
+.convoy-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.convoy-name-btn {
+    color: white;
+    font-weight: 600;
+    font-size: 1.125rem;
+    /* text-lg */
+    flex: 1;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    text-align: left;
+    padding: 0;
+}
+
+.convoy-name-btn:hover {
+    color: #60a5fa;
+    /* hover:text-blue-400 */
+}
+
+.priority-badge {
+    padding: 0.25rem 0.75rem;
+    /* px-3 py-1 */
+    border-radius: 9999px;
+    border: 1px solid;
+    font-size: 0.75rem;
+    /* text-xs */
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+/* Priority Colors */
+.priority-critical {
+    color: #f87171;
+    /* text-red-400 */
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.priority-high {
+    color: #fb923c;
+    /* text-orange-400 */
+    background-color: rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.2);
+}
+
+.priority-medium {
+    color: #facc15;
+    /* text-yellow-400 */
+    background-color: rgba(234, 179, 8, 0.1);
+    border-color: rgba(234, 179, 8, 0.2);
+}
+
+.priority-low {
+    color: #4ade80;
+    /* text-green-400 */
+    background-color: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+/* Card Details */
+.convoy-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    /* space-y-3 */
+    color: #94a3b8;
+    /* text-slate-400 */
+    font-size: 0.875rem;
+    /* text-sm */
+    margin-bottom: 1rem;
+}
+
+.route-info-box {
+    background-color: rgba(15, 23, 42, 0.5);
+    /* bg-slate-900/50 */
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+    border: 1px solid #334155;
+    /* border-slate-700 */
+}
+
+.route-label {
+    font-size: 0.75rem;
+    /* text-xs */
+    color: #64748b;
+    /* text-slate-500 */
+    margin-bottom: 0.25rem;
+}
+
+.route-places {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #cbd5e1;
+    /* text-slate-300 */
+}
+
+.place-source {
+    font-weight: 500;
+    color: #4ade80;
+    /* text-green-400 */
+}
+
+.place-arrow {
+    color: #475569;
+    /* text-slate-600 */
+}
+
+.place-dest {
+    font-weight: 500;
+    color: #f87171;
+    /* text-red-400 */
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+}
+
+.detail-value {
+    color: white;
+    font-weight: 500;
+}
+
+/* Actions */
+.toggle-vehicles-btn {
+    width: 100%;
+    margin-bottom: 0.75rem;
+    /* mb-3 */
+    padding: 0.5rem 1rem;
+    background-color: #334155;
+    /* bg-slate-700 */
+    color: white;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+    /* text-sm */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+    cursor: pointer;
+}
+
+.toggle-vehicles-btn:hover {
+    background-color: #475569;
+    /* hover:bg-slate-600 */
+}
+
+.card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-add-vehicle-small,
+.btn-delete-convoy-small {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+    /* text-sm */
+    border: none;
+    cursor: pointer;
+    color: white;
+}
+
+.btn-add-vehicle-small {
+    flex: 1;
+    background-color: #2563eb;
+    /* bg-blue-600 */
+}
+
+.btn-add-vehicle-small:hover {
+    background-color: #1d4ed8;
+    /* hover:bg-blue-700 */
+}
+
+.btn-delete-convoy-small {
+    background-color: #dc2626;
+    /* bg-red-600 */
+}
+
+.btn-delete-convoy-small:hover {
+    background-color: #b91c1c;
+    /* hover:bg-red-700 */
+}
+
+/* Expanded Vehicles Section */
+.expanded-vehicles {
+    border-top: 1px solid #334155;
+    /* border-slate-700 */
+    padding: 1.5rem;
+    /* p-6 */
+    background-color: rgba(15, 23, 42, 0.3);
+    /* bg-slate-900/30 */
+}
+
+.expanded-title {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vehicles-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    /* space-y-3 */
+}
+
+.vehicle-item {
+    background-color: #1e293b;
+    /* bg-slate-800 */
+    border-radius: 0.5rem;
+    border: 1px solid #334155;
+    /* border-slate-700 */
+    padding: 1rem;
+    transition: border-color 0.2s;
+}
+
+.vehicle-item:hover {
+    border-color: #475569;
+    /* hover:border-slate-600 */
+}
+
+.vehicle-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.vehicle-id-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.registration-text {
+    color: white;
+    font-weight: 600;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    /* text-xs */
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+/* Status Colors */
+.status-idle {
+    color: #94a3b8;
+    background-color: rgba(100, 116, 139, 0.1);
+}
+
+.status-en_route {
+    color: #60a5fa;
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.status-at_checkpoint {
+    color: #facc15;
+    background-color: rgba(234, 179, 8, 0.1);
+}
+
+.status-completed {
+    color: #4ade80;
+    background-color: rgba(34, 197, 94, 0.1);
+}
+
+.status-breakdown {
+    color: #f87171;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.vehicle-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    /* text-sm */
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #94a3b8;
+    /* text-slate-400 */
+}
+
+.stat-item-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+.stat-val {
+    color: white;
+}
+
+.stat-val-cap {
+    text-transform: capitalize;
+}
+
+/* Progress Bar */
+.load-progress-container {
+    margin-top: 0.75rem;
+}
+
+.progress-track {
+    width: 100%;
+    background-color: #334155;
+    /* bg-slate-700 */
+    border-radius: 9999px;
+    height: 0.5rem;
+}
+
+.progress-fill {
+    background-color: #3b82f6;
+    /* bg-blue-500 */
+    height: 0.5rem;
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    /* text-xs */
+    color: #94a3b8;
+    /* text-slate-400 */
+    margin-top: 0.25rem;
+    text-align: right;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 1rem;
+}
+
+/* Add Vehicle Modal */
+.modal-content-large {
+    background-color: #1e293b;
+    /* bg-slate-800 */
+    border-radius: 0.5rem;
+    border: 1px solid #334155;
+    /* border-slate-700 */
+    width: 100%;
+    max-width: 42rem;
+    /* max-w-2xl */
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    position: sticky;
+    top: 0;
+    background-color: #1e293b;
+    border-bottom: 1px solid #334155;
+    padding: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.modal-title-group h2 {
+    font-size: 1.5rem;
+    /* text-2xl */
+    font-weight: 700;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.convoy-info-mini {
+    font-size: 0.875rem;
+    /* text-sm */
+    color: #94a3b8;
+    /* text-slate-400 */
+}
+
+.close-modal-btn {
+    color: #94a3b8;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-modal-btn:hover {
+    color: white;
+}
+
+.modal-form {
+    padding: 1.5rem;
+}
+
+/* Delete Confirm Modal */
+.modal-content-small {
+    background-color: #1e293b;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    /* border-red-500/30 */
+    width: 100%;
+    max-width: 28rem;
+    /* max-w-md */
+    padding: 1.5rem;
+}
+
+.delete-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.delete-icon-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    background-color: rgba(239, 68, 68, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #f87171;
+}
+
+.delete-title h2 {
+    font-size: 1.25rem;
+    /* text-xl */
+    font-weight: 700;
+    color: white;
+}
+
+.delete-title p {
+    font-size: 0.875rem;
+    color: #94a3b8;
+}
+
+.convoy-summary-box {
+    background-color: rgba(15, 23, 42, 0.5);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #334155;
+}
+
+.delete-warning-text {
+    color: #cbd5e1;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-confirm-delete {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: #dc2626;
+    color: white;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-confirm-delete:hover:not(:disabled) {
+    background-color: #b91c1c;
+}
+
+.modal-cancel-btn {
+    padding: 0.75rem 1rem;
+    background-color: #334155;
+    color: white;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.modal-cancel-btn:hover:not(:disabled) {
+    background-color: #475569;
+}

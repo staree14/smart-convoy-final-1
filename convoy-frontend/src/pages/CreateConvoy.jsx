@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import { Plus, Trash2, Send } from 'lucide-react';
+import '../styles/createConvoy.css';
 
 const VEHICLE_TYPES = ['truck', 'van', 'jeep', 'ambulance', 'tanker'];
 const LOAD_TYPES = ['medical', 'supplies', 'ammunition', 'fuel', 'personnel'];
@@ -150,285 +151,242 @@ export default function CreateConvoy() {
       setLoading(false);
     }
   };
-  <div className="max-w-6xl mx-auto px-6 py-12">
-    <input className="..." />
-    <input className="..." />
-    <button className="..." />
-  </div>
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="create-convoy-container">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-        <input className="p-0.5 rounded w-full outline-none" />
-        <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-      </div>
 
-      <main className="w-full px-6 py-12">
-        <div className="flex flex-col items-center">
-        {/* Header */}
-        <div className="mb-8 w-full max-w-4xl">
-          <h1 className="text-4xl font-bold text-white mb-2">Create Convoy</h1>
-          <p className="text-slate-400">Set up a new military convoy with vehicles and route information</p>
-        </div>
-        <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-          <input className="p-0.5 rounded w-full outline-none" />
-          <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-        </div>
-
-        {/* Error/Success Messages */}
-        {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm w-full max-w-4xl">
-            {error}
+      <main className="create-convoy-main">
+        <div className="create-convoy-header-wrapper">
+          {/* Header */}
+          <div className="create-convoy-header">
+            <h1 className="create-convoy-title">Create Convoy</h1>
+            <p className="create-convoy-subtitle">Set up a new military convoy with vehicles and route information</p>
           </div>
-        )}
-        {success && (
-          <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-green-300 text-sm w-full max-w-4xl">
-            {success}
-          </div>
-        )}
-        {geocodingMessage && (
-          <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-sm w-full max-w-4xl">
-            ⏳ {geocodingMessage}
-          </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-8 w-full max-w-4xl">
-
-          {/* Convoy Information Section */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-            <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-sm">1</span>
-              Convoy Information
-            </h2>
-            <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-              <input className="p-0.5 rounded w-full outline-none" />
-              <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="message-box message-error">
+              {error}
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Convoy Name */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Convoy Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Medical Supply Alpha"
-                  value={convoyName}
-                  onChange={(e) => setConvoyName(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  required
-                />
-              </div>
-
-              {/* Priority */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Priority Level</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                >
-                  {PRIORITIES.map(p => (
-                    <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Source Place Name */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Source Location <span className="text-blue-400">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g., New Delhi, India or Delhi, India"
-                  value={sourcePlace}
-                  onChange={(e) => setSourcePlace(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-xs text-slate-400 mt-1">💡 Use full place name (city, country) for better accuracy</p>
-              </div>
-
-              {/* Destination Place Name */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Destination Location <span className="text-blue-400">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g., Gurgaon, India or Mumbai, India"
-                  value={destPlace}
-                  onChange={(e) => setDestPlace(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-                <p className="text-xs text-slate-400 mt-1">💡 Use full place name (city, country) for better accuracy</p>
-              </div>
+          )}
+          {success && (
+            <div className="message-box message-success">
+              {success}
             </div>
-            <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-              <input className="p-0.5 rounded w-full outline-none" />
-              <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-</div>
+          )}
+          {geocodingMessage && (
+            <div className="message-box message-info">
+              ⏳ {geocodingMessage}
+            </div>
+          )}
 
-          </div>
-          <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-            <input className="p-0.5 rounded w-full outline-none" />
-            <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-          </div>
+          <form onSubmit={handleSubmit} className="create-convoy-form">
 
-          <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-            <input className="p-0.5 rounded w-full outline-none" />
-            <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-          </div>
-
-          {/* Vehicles Section */}
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-sm">2</span>
-                Vehicles ({vehicles.length})
+            {/* Convoy Information Section */}
+            <div className="form-section">
+              <h2 className="section-title">
+                <span className="section-step-number">1</span>
+                Convoy Information
               </h2>
 
+              <div className="form-grid-2">
+                {/* Convoy Name */}
+                <div className="form-group">
+                  <label className="form-label">Convoy Name <span className="required-asterisk">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Medical Supply Alpha"
+                    value={convoyName}
+                    onChange={(e) => setConvoyName(e.target.value)}
+                    className="form-input"
+                    required
+                  />
+                </div>
+
+                {/* Priority */}
+                <div className="form-group">
+                  <label className="form-label">Priority Level</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="form-select"
+                  >
+                    {PRIORITIES.map(p => (
+                      <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Source Place Name */}
+                <div className="form-group">
+                  <label className="form-label">Source Location <span className="required-asterisk">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g., New Delhi, India or Delhi, India"
+                    value={sourcePlace}
+                    onChange={(e) => setSourcePlace(e.target.value)}
+                    className="form-input"
+                  />
+                  <p className="form-hint">💡 Use full place name (city, country) for better accuracy</p>
+                </div>
+
+                {/* Destination Place Name */}
+                <div className="form-group">
+                  <label className="form-label">Destination Location <span className="required-asterisk">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Gurgaon, India or Mumbai, India"
+                    value={destPlace}
+                    onChange={(e) => setDestPlace(e.target.value)}
+                    className="form-input"
+                  />
+                  <p className="form-hint">💡 Use full place name (city, country) for better accuracy</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Vehicles Section */}
+            <div className="form-section">
+              <div className="vehicle-section-header">
+                <h2 className="section-title" style={{ marginBottom: 0 }}>
+                  <span className="section-step-number">2</span>
+                  Vehicles ({vehicles.length})
+                </h2>
+
+                <button
+                  type="button"
+                  onClick={addVehicle}
+                  className="btn-add-vehicle"
+                >
+                  <Plus size={20} />
+                  Add Vehicle
+                </button>
+              </div>
+
+              <div className="vehicle-list">
+                {vehicles.map((vehicle, idx) => (
+                  <div key={vehicle.id} className="vehicle-card">
+                    <div className="vehicle-card-header">
+                      <h3 className="vehicle-title">Vehicle {idx + 1}</h3>
+                      {vehicles.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeVehicle(vehicle.id)}
+                          className="btn-remove-vehicle"
+                          title="Remove vehicle"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="vehicle-grid">
+                      {/* Vehicle Type */}
+                      <div>
+                        <label className="sm-label">Type *</label>
+                        <select
+                          value={vehicle.vehicleType}
+                          onChange={(e) => updateVehicle(vehicle.id, 'vehicleType', e.target.value)}
+                          className="sm-select"
+                        >
+                          {VEHICLE_TYPES.map(t => (
+                            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Registration Number */}
+                      <div>
+                        <label className="sm-label">Registration *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., DL-01-AB-1234"
+                          value={vehicle.registrationNumber}
+                          onChange={(e) => updateVehicle(vehicle.id, 'registrationNumber', e.target.value)}
+                          className="sm-input"
+                        />
+                      </div>
+
+                      {/* Driver Name */}
+                      <div>
+                        <label className="sm-label">Driver Name *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Raj Kumar"
+                          value={vehicle.driverName}
+                          onChange={(e) => updateVehicle(vehicle.id, 'driverName', e.target.value)}
+                          className="sm-input"
+                        />
+                      </div>
+
+                      {/* Load Type */}
+                      <div>
+                        <label className="sm-label">Load Type *</label>
+                        <select
+                          value={vehicle.loadType}
+                          onChange={(e) => updateVehicle(vehicle.id, 'loadType', e.target.value)}
+                          className="sm-select"
+                        >
+                          {LOAD_TYPES.map(t => (
+                            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Load Weight */}
+                      <div>
+                        <label className="sm-label">Load Weight (kg) *</label>
+                        <input
+                          type="number"
+                          placeholder="e.g., 500"
+                          value={vehicle.loadWeight}
+                          onChange={(e) => updateVehicle(vehicle.id, 'loadWeight', e.target.value)}
+                          className="sm-input"
+                        />
+                      </div>
+
+                      {/* Capacity */}
+                      <div>
+                        <label className="sm-label">Capacity (kg) *</label>
+                        <input
+                          type="number"
+                          placeholder="e.g., 1000"
+                          value={vehicle.capacity}
+                          onChange={(e) => updateVehicle(vehicle.id, 'capacity', e.target.value)}
+                          className="sm-input"
+                        />
+                      </div>
+
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="form-actions">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-create"
+              >
+                {loading ? 'Creating...' : (
+                  <>
+                    <Send size={20} />
+                    Create Convoy
+                  </>
+                )}
+              </button>
               <button
                 type="button"
-                onClick={addVehicle}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                onClick={() => navigate('/dashboard')}
+                className="btn-cancel"
               >
-                <Plus className="w-5 h-5" />
-                Add Vehicle
+                Cancel
               </button>
             </div>
-            <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-              <input className="p-0.5 rounded w-full outline-none" />
-              <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-            </div>
-
-            <div className="space-y-6">
-              {vehicles.map((vehicle, idx) => (
-                <div key={vehicle.id} className="border border-slate-700 rounded-lg p-4 bg-slate-900/50">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-md font-semibold text-white">Vehicle {idx + 1}</h3>
-                    {vehicles.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVehicle(vehicle.id)}
-                        className="p-2 text-red-400 hover:text-red-300 transition-colors"
-                        title="Remove vehicle"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Vehicle Type */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Type *</label>
-                      <select
-                        value={vehicle.vehicleType}
-                        onChange={(e) => updateVehicle(vehicle.id, 'vehicleType', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                      >
-                        {VEHICLE_TYPES.map(t => (
-                          <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Registration Number */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Registration *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., DL-01-AB-1234"
-                        value={vehicle.registrationNumber}
-                        onChange={(e) => updateVehicle(vehicle.id, 'registrationNumber', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    {/* Driver Name */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Driver Name *</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., Raj Kumar"
-                        value={vehicle.driverName}
-                        onChange={(e) => updateVehicle(vehicle.id, 'driverName', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    {/* Load Type */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Load Type *</label>
-                      <select
-                        value={vehicle.loadType}
-                        onChange={(e) => updateVehicle(vehicle.id, 'loadType', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-sm focus:outline-none focus:border-blue-500"
-                      >
-                        {LOAD_TYPES.map(t => (
-                          <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Load Weight */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Load Weight (kg) *</label>
-                      <input
-                        type="number"
-                        placeholder="e.g., 500"
-                        value={vehicle.loadWeight}
-                        onChange={(e) => updateVehicle(vehicle.id, 'loadWeight', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    {/* Capacity */}
-                    <div>
-                      <label className="block text-xs font-medium text-slate-400 mb-1">Capacity (kg) *</label>
-                      <input
-                        type="number"
-                        placeholder="e.g., 1000"
-                        value={vehicle.capacity}
-                        onChange={(e) => updateVehicle(vehicle.id, 'capacity', e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-                      <input className="p-0.5 rounded w-full outline-none" />
-                      <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-                    </div>
-
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="max-w-6xl mx-auto px-1 py-1 space-y-0">
-            <input className="p-0.5 rounded w-full outline-none" />
-            <button className="px-2 py-0.5 bg-blue-600 text-white rounded" />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 text-white font-semibold rounded-lg shadow-xl shadow-blue-500/40 transition-all duration-200"
-            >
-              {loading ? 'Creating...' : (
-                <>
-                  <Send className="w-5 h-5" />
-                  Create Convoy
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          </form>
         </div>
       </main>
     </div>
