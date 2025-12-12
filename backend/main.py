@@ -18,11 +18,13 @@ async def handle_options(request: Request, call_next):
     if request.method == "OPTIONS":
         return JSONResponse(
             content={"status": "ok"},
+            status_code=200,
             headers={
                 "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
                 "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
                 "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "86400",
             },
         )
     response = await call_next(request)

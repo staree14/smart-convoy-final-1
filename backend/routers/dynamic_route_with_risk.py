@@ -38,48 +38,46 @@ class RiskZone:
 
 RISK_ZONES: List[RiskZone] = []
 
-def load_risk_zones(filepath: str = "risk_zones.csv") -> List[RiskZone]:
-    """Load risk zones from CSV file."""
+def load_risk_zones_from_db() -> List[RiskZone]:
+    """Load risk zones from database."""
     zones = []
-    
-    # Adjust path if running from backend root or elsewhere
-    if not os.path.exists(filepath):
-        # Try looking in current dir if not found (relative to where script might be)
-        # But commonly we run from backend/
-        if os.path.exists(os.path.join("backend", filepath)):
-            filepath = os.path.join("backend", filepath)
-        # Or if we are in backend/routers/ and file is in backend/
-        elif os.path.exists(os.path.join("..", filepath)):
-            filepath = os.path.join("..", filepath)
 
-    if not os.path.exists(filepath):
-        print(f"[RISK] {filepath} not found")
-        return zones
-    
     try:
-        with open(filepath, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                try:
-                    zone = RiskZone(
-                        zone_id=row.get('riskzone_id', ''),
-                        name=row.get('name', ''),
-                        center_lat=float(row.get('center_lat', 0)),
-                        center_lon=float(row.get('center_lon', 0)),
-                        radius_km=float(row.get('radius_km', 5)),
-                        risk_level=row.get('risk_level', 'low').lower()
-                    )
-                    zones.append(zone)
-                except Exception as e:
-                    print(f"[RISK] Error parsing row {row}: {e}")
-        print(f"[RISK] Loaded {len(zones)} risk zones")
+        from db_connection import get_connection
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT id, name, center_lat, center_lon, radius_km, risk_level
+            FROM risk_zones
+        """)
+
+        rows = cur.fetchall()
+
+        for row in rows:
+            try:
+                zone = RiskZone(
+                    zone_id=str(row['id']),
+                    name=row['name'],
+                    center_lat=float(row['center_lat']),
+                    center_lon=float(row['center_lon']),
+                    radius_km=float(row['radius_km']),
+                    risk_level=row['risk_level'].lower() if row['risk_level'] else 'low'
+                )
+                zones.append(zone)
+            except Exception as e:
+                print(f"[RISK] Error parsing row {row}: {e}")
+
+        print(f"[RISK] Loaded {len(zones)} risk zones from database")
+        cur.close()
+        conn.close()
     except Exception as e:
-        print(f"[RISK] Error loading {filepath}: {e}")
-    
+        print(f"[RISK] Error loading from database: {e}")
+
     return zones
 
 # Load at startup
-RISK_ZONES = load_risk_zones()
+RISK_ZONES = load_risk_zones_from_db()
 
 # =====================================
 # Utility Functions
