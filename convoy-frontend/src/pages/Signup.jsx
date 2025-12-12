@@ -1,7 +1,6 @@
-import React, { useState } from "react";
-import "../styles/Signup.css";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Truck, ArrowRight } from "lucide-react";
+import { User, Lock, Phone, Truck, ArrowRight, LogIn, Mail } from "lucide-react";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -63,92 +62,89 @@ export default function Signup() {
   }
 
   return (
-    <div className="signup-page">
+    // **FIXED**: Ensures the component takes up full height and centers content
+    <div className="min-h-screen bg-[#070912] flex items-center justify-center px-4 py-16 text-white font-sans">
       
-      {/* Background Grid/Noise (CSS handles the appearance) */}
-      <div className="background-grid" />
+      {/* Subtle Background Grid/Noise */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f111a_1px,transparent_1px),linear-gradient(to_bottom,#0f111a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-5 pointer-events-none" />
 
-      {/* Signup Card Container */}
-      <div className="signup-container">
+      {/* Signup Card Container - Centered and Spaced */}
+      <div className="relative w-full max-w-sm px-4">
         
         {/* Truck Icon/Logo Header - Floating above the card */}
-        <div className="logo-header">
-            <div className="logo-icon-wrapper">
-                <Truck className="logo-icon" />
+        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+            <div className="w-16 h-12 rounded-lg bg-white/10 border-2 border-white/20 flex items-center justify-center backdrop-blur-md">
+                <Truck className="w-8 h-8 text-white" />
             </div>
         </div>
 
-        {/* Form Card */}
-        <div className="form-card">
+        {/* Form Card - Dark, rounded, and glowing border */}
+        <div className="bg-[#10131d] rounded-2xl border border-blue-500/30 p-10 pt-16 shadow-2xl shadow-black/50 overflow-hidden">
           
           {/* Header Text (Convoy AI) */}
-          <div className="header-text-wrapper"> 
-            <h1 className="header-title">
+          <div className="text-center mb-10"> 
+            <h1 className="text-2xl font-semibold tracking-tight text-white mb-1">
               Convoy AI
             </h1>
-            <p className="header-subtitle">Create your account</p> 
+            <p className="text-slate-400 text-sm">Create your account</p> 
           </div>
 
           {error && (
-            <div className="error-message-box">
+            <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm flex items-center gap-2">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="signup-form">
+          <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Full Name Field */}
-            <div className="input-group">
-              <label htmlFor="name">Full Name</label>
+            {/* Name Field */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
               <input
-                id="name"
                 type="text"
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="input-field"
+                className="w-full px-4 py-3 bg-[#1e232e] border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
             </div>
 
             {/* Email Field */}
-            <div className="input-group">
-              <label htmlFor="email">Email</label>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Email</label>
               <input
-                id="email"
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
+                className="w-full px-4 py-3 bg-[#1e232e] border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
             </div>
 
             {/* Phone Number Field */}
-            <div className="input-group">
-              <label htmlFor="phone">Phone Number</label>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
               <input
-                id="phone"
                 type="tel"
-                placeholder="Enter your phone number"
+                placeholder="e.g. +1 555 555 5555"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="input-field"
+                className="w-full px-4 py-3 bg-[#1e232e] border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
             </div>
 
             {/* Password Field */}
-            <div className="input-group">
-              <label htmlFor="password">Password</label>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
               <input
-                id="password"
                 type="password"
                 placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
+                className="w-full px-4 py-3 bg-[#1e232e] border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                 required
               />
             </div>
@@ -157,25 +153,26 @@ export default function Signup() {
             <button
               type="submit"
               disabled={loading}
-              className="signup-button"
+              className="w-full py-3 mt-8 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-lg rounded-lg shadow-lg shadow-blue-500/40 transition-all duration-200 flex items-center justify-center gap-2"
             >
               {loading ? (
                 "Creating Account..."
               ) : (
                 <>
-                  <ArrowRight className="button-icon"/> Sign Up
+                  <ArrowRight className="w-5 h-5"/> Sign Up
                 </>
               )}
             </button>
           </form>
 
-          {/* Login Link */}
-          <div className="login-link-wrapper">
-            <p>
+          {/* Login Link - Clickable to transport to /login */}
+          <div className="text-center mt-4">
+            <p className="text-slate-400 text-sm">
               Already have an account?{" "}
+              {/* This Link component is what makes it clickable and transports to /login */}
               <Link 
                 to="/login" 
-                className="login-link"
+                className="text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200"
               >
                 Login
               </Link>

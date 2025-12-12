@@ -7,17 +7,17 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-slate-950 text-white overflow-hidden selection:bg-blue-500/30">
-      
+
       {/* BACKGROUND EFFECTS */}
       {/* Grid Pattern covering entire screen */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-      
+
       {/* Top Blue Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-600/20 blur-[100px] rounded-full pointer-events-none" />
 
       {/* NAVBAR - FIXED TO FULL WIDTH */}
       <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-slate-950/50 backdrop-blur-md">
-        <div className="w-full flex justify-between items-center px-8 py-5"> 
+        <div className="w-full flex justify-between items-center px-8 py-5">
           {/* Logo Section */}
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
             <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center border border-white/10 shadow-xl">
@@ -27,7 +27,7 @@ export default function Home() {
               Convoy<span className="text-blue-500">AI</span>
             </span>
           </div>
-          
+
           {/* Login Section - Pushed to far right */}
           <button
             onClick={() => navigate("/login")}
@@ -50,8 +50,8 @@ export default function Home() {
         {/* HERO HEADING */}
         <h1 className="max-w-5xl text-5xl md:text-7xl font-extrabold tracking-tight leading-tight mb-6 text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-slate-400 drop-shadow-sm">
           Smart Convoy AI <br />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
-            Smart Convoy AI
+          <span className="bg-clip-text text-4xl text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
+            where every convoy moves with intelligence not intuition
           </span>
         </h1>
 
@@ -90,7 +90,7 @@ export default function Home() {
             >
               {/* Card Hover Glow */}
               <div className="absolute inset-0 bg-blue-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
+
               <div className="relative flex flex-col items-center text-center">
                 <div className="mb-5 p-3 rounded-lg bg-slate-800 group-hover:bg-slate-700 transition-colors border border-slate-700 shadow-lg">
                   {feature.icon}
@@ -110,7 +110,7 @@ export default function Home() {
             <h2 className="text-base font-bold text-slate-200">Convoy AI</h2>
             <p className="text-slate-500 text-xs">© 2024 Logistics Security Systems.</p>
           </div>
-          
+
           <div className="flex gap-6 text-sm text-slate-400">
             <a href="#" className="hover:text-blue-400 transition">Privacy</a>
             <a href="#" className="hover:text-blue-400 transition">Terms</a>

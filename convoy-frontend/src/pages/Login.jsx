@@ -1,5 +1,4 @@
 import { useState } from "react";
-import "../styles/Login.css";
 import { useNavigate, Link } from "react-router-dom";
 import { LogIn, Mail, Lock, Truck, ArrowRight, ChevronDown } from "lucide-react";
 
@@ -47,49 +46,50 @@ export default function Login() {
   }
 
   return (
-    <div className="login-page-wrapper">
-
+    <div className="min-h-screen bg-[#070912] flex items-center justify-center px-4 py-16 text-white font-sans">
+      
       {/* Subtle Background Grid/Noise */}
-      <div className="background-grid" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f111a_1px,transparent_1px),linear-gradient(to_bottom,#0f111a_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-5 pointer-events-none -z-10" />
 
       {/* Login Card Container - Centered and Spaced */}
-      <div className="login-card-container">
-
+      <div className="relative w-full max-w-xs px-4">
+        
         {/* Truck Icon/Logo Header - Floating above the card */}
-        <div className="truck-icon-header">
-          <div className="truck-icon-wrapper">
-            <Truck className="truck-icon" />
-          </div>
+        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+            <div className="w-16 h-12 rounded-lg bg-white/10 border-2 border-white/20 flex items-center justify-center backdrop-blur-md">
+                <Truck className="w-8 h-8 text-white" />
+            </div>
         </div>
 
         {/* Form Card - Dark, rounded, and glowing border */}
-        <div className="form-card-base">
+        <div className="bg-[#10131d] rounded-2xl border border-blue-500/30 p-10 pt-16 shadow-2xl shadow-black/50 overflow-hidden 
+              relative z-10 before:content-[''] before:absolute before:inset-0 before:border-2 before:border-blue-500/50 before:rounded-2xl before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-300">
           
           {/* Header Text (Convoy AI) */}
-          <div className="card-header-text">
-            <button type="button" onClick={() => navigate('/dashboard')} className="header-button">
-              <h1 className="header-title">
-                Convoy <span className="header-title-blue">AI</span>
+          <div className="text-left mb-12"> 
+            <button type="button" onClick={() => navigate('/dashboard')} className="text-left w-full">
+              <h1 className="text-4xl font-semibold tracking-tight mb-1">
+                Convoy <span className="text-blue-400">AI</span>
               </h1>
             </button>
-            <p className="header-tagline"></p>
+            <p className="text-slate-400 text-base h-5"></p> 
           </div>
 
           {error && (
-            <div className="error-message-box">
-              <svg xmlns="http://www.w3.org/2000/svg" className="error-icon" viewBox="0 0 20 20" fill="currentColor">
+            <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="login-form">
+          <form onSubmit={handleSubmit} className="space-y-8">
 
             {/* Email Field Group */}
-            <div className="form-group">
-              <label className="input-label">
-                <Mail className="input-icon" /> Email
+            <div>
+              <label className="block text-base font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <Mail className="w-5 h-5 text-slate-400"/> Email
               </label>
 
               <div className="relative">
@@ -98,16 +98,16 @@ export default function Login() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field"
+                  className="w-full px-4 py-3 bg-[#1e232e] border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />
               </div>
             </div>
 
             {/* Password Field Group */}
-            <div className="form-group">
-              <label className="input-label">
-                <Lock className="input-icon" /> Password
+            <div>
+              <label className="block text-base font-medium text-slate-300 mb-2 flex items-center gap-2">
+                <Lock className="w-5 h-5 text-slate-400"/> Password
               </label>
               <div className="relative">
                 <input
@@ -115,7 +115,7 @@ export default function Login() {
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field"
+                  className="w-full px-4 py-3 bg-[#1e232e] border border-white/10 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                   required
                 />
               </div>
@@ -125,26 +125,26 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="login-button"
+              className="w-full py-4 mt-12 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 text-white font-semibold text-lg rounded-lg shadow-xl shadow-blue-500/40 transition-all duration-200 flex items-center justify-center gap-2 relative z-20"
             >
               {loading ? (
                 "Authenticating..."
               ) : (
                 <>
-                  <ArrowRight className="login-button-icon" /> Log in 
+                  <ArrowRight className="w-5 h-5"/> Log in to Convoy
                 </>
               )}
             </button>
           </form>
 
           {/* Sign Up Link */}
-          <div className="signup-link-wrapper">
-            <p className="signup-text">
+          <div className="text-center mt-6">
+            <p className="text-slate-300 text-sm">
               No account?{" "}
               <button
                 type="button"
                 onClick={() => navigate('/signup')}
-                className="signup-link-button"
+                className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors duration-200 cursor-pointer relative z-20"
               >
                 Sign Up
               </button>
