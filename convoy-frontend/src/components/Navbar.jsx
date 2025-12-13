@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import '../styles/Navbar.css';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ export default function Navbar() {
   } catch (e) {
     user = null;
   }
-  const displayName = user?.username || user?.email || 'User';
+  const displayName = user?.service_no || user?.username || user?.email || 'User';
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -18,26 +19,26 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="w-full bg-slate-900 border-b border-slate-800">
-      <div className="w-full px-6 py- flex items-center justify-between">
+    <nav className="navbar-container">
+      <div className="navbar-content">
         {/* Left: Brand */}
         <div className="flex items-center">
-          <Link to="/" className="text-white font-bold text-xl">Smart Convoy</Link>
+          <Link to="/" className="navbar-brand">Smart Convoy AI</Link>
         </div>
 
         {/* Right: Navigation links */}
-        <div className="flex items-center gap-6">
-          <Link to="/dashboard" className="text-slate-300 hover:text-white text-lg">Dashboard</Link>
-          <Link to="/create-convoy" className="text-slate-300 hover:text-white text-lg">Create Convoy</Link>
-          <Link to="/history" className="text-slate-300 hover:text-white text-lg">History</Link>
+        <div className="navbar-links">
+          <Link to="/dashboard" className="navbar-link">Dashboard</Link>
+          <Link to="/create-convoy" className="navbar-link">Create Convoy</Link>
+          <Link to="/history" className="navbar-link">History</Link>
 
           {/* Profile name (non-clickable) */}
-          <span className="text-slate-300 text-sm opacity-90">{displayName}</span>
+          <span className="navbar-user-badge">{displayName}</span>
 
           {/* Logout button */}
           <button
             onClick={handleLogout}
-            className="text-sm px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md"
+            className="navbar-logout-btn"
           >
             Logout
           </button>

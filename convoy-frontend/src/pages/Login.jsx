@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { LogIn, Mail, Lock, Truck, ArrowRight, ChevronDown } from "lucide-react";
-import "../styles/login.css";
+import { useNavigate } from "react-router-dom";
+import { Lock, Truck, ArrowRight, Shield } from "lucide-react";
+import "../styles/Login.css";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [serviceNo, setServiceNo] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function Login() {
         const res = await fetch('http://localhost:8000/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ service_no: serviceNo, password }),
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -31,7 +31,7 @@ export default function Login() {
         // store user_id and access_token
         if (data.user_id) {
           localStorage.setItem('user_id', data.user_id);
-          localStorage.setItem('user', JSON.stringify({ email, user_id: data.user_id }));
+          localStorage.setItem('user', JSON.stringify({ service_no: serviceNo, user_id: data.user_id }));
         }
         if (data.access_token) {
           localStorage.setItem('access_token', data.access_token);
@@ -84,18 +84,18 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} className="login-form">
-            {/* Email Field Group */}
+            {/* Service No Field Group */}
             <div className="input-group">
               <label className="input-label">
-                <Mail className="input-icon" /> Email
+                <Shield className="input-icon" /> Service Number
               </label>
 
               <div className="input-wrapper">
                 <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="Enter Service Number (e.g. IC123456)"
+                  value={serviceNo}
+                  onChange={(e) => setServiceNo(e.target.value.toUpperCase())}
                   className="input-field"
                   required
                 />
@@ -135,17 +135,10 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Sign Up Link */}
+          {/* Sign Up Link Removed - Registration is now internal via Service Registry */}
           <div className="signup-section">
             <p className="signup-text">
-              No account?{" "}
-              <button
-                type="button"
-                onClick={() => navigate('/signup')}
-                className="signup-link"
-              >
-                Sign Up
-              </button>
+              Restricted Access. Authorized Personnel Only.
             </p>
           </div>
         </div>

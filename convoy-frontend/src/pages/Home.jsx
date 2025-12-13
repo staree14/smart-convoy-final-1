@@ -59,12 +59,6 @@ export default function Home() {
         <p className="text-lg md:text-xl text-slate-400 max-w-3xl mx-auto mb-32 leading-relaxed">
           Smart route planning, real-time monitoring, and military-grade security for every convoy.
         </p>
-        <div className="max-w-6xl mx-auto px-6 py-12">
-          <input className="..." />
-          <input className="..." />
-          <button className="..." />
-        </div>
-
         {/* FEATURE CARDS - NO BUTTONS ABOVE */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto w-full px-4">
           {[

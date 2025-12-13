@@ -1,262 +1,259 @@
-/* --- Global Page/Wrapper Styles --- */
-.login-page-wrapper {
-  min-height: 100vh;
-  height: 100vh;
-  width: 100%;
+/* Login.css */
 
+/* Global Page Wrapper */
+.login-container {
+  min-height: 100vh;
+  width: 100%;
   background-image: url("/login-bg.png");
+  /* Ensure this image exists in public folder */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-
   display: flex;
   align-items: center;
   justify-content: flex-end;
-
-  padding-right: 4rem;  /* MOVE LOGIN CARD LEFT */
+  /* Align card to the right */
+  padding-right: 4rem;
+  /* Spacing from right edge */
   padding-left: 1rem;
 }
 
-
-/* --- Background Grid/Noise (No change) --- */
-.background-grid {
+/* Background Grid/Noise Overlay */
+.login-bg-grid {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(to right, #0f111a 1px, transparent 1px), 
-                    linear-gradient(to bottom, #0f111a 1px, transparent 1px);
-  background-size: cover;
+  background-image: linear-gradient(to right, #0f111a 1px, transparent 1px),
+    linear-gradient(to bottom, #0f111a 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  /* Grid size */
   opacity: 0.05;
   pointer-events: none;
-  z-index: -10;
+  z-index: 0;
 }
 
-/* --- Login Card Container --- */
-.login-card-container {
+/* Login Content Wrapper (centers the card vertically in the flex container) */
+.login-content-wrapper {
   position: relative;
   width: 100%;
-  max-width: 18rem; /* max-w-xs (320px) reduced to 18rem (288px) for small size */
-  padding-left: 0; /* Removed horizontal padding */
-  padding-right: 0; /* Removed horizontal padding */
+  max-width: 24rem;
+  /* slightly wider card */
+  z-index: 10;
 }
 
-/* --- Truck Icon Header --- */
-.truck-icon-header {
+/* Truck Icon Header (Floating above card) */
+.truck-icon-wrapper {
   position: absolute;
-  top: -2.5rem; /* Reduced top position from -top-12 to -top-10 equivalent */
+  top: -2.5rem;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 20;
 }
 
-.truck-icon-wrapper {
-  width: 3.5rem; /* w-14 (Slightly smaller) */
-  height: 2.75rem; /* h-11 (Slightly smaller) */
-  border-radius: 0.5rem;
+.truck-icon-container {
+  width: 3.5rem;
+  height: 3.5rem;
   background-color: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(8px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .truck-icon {
-  width: 1.5rem; /* w-6 (Smaller icon) */
-  height: 1.5rem; /* h-6 (Smaller icon) */
-  color: #ffffff;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: white;
 }
 
-/* --- Form Card Base (The main login box) --- */
-.form-card-base {
-  background-color: #10131d;
-  border-radius: 1rem;
+/* Main Login Card */
+.login-card {
+  background-color: #0f172a;
+  /* slate-900 */
   border: 1px solid rgba(59, 130, 246, 0.3);
-  padding: 1.5rem; /* Reduced padding from p-10 (2.5rem) to p-6 (1.5rem) */
-  padding-top: 3.5rem; /* Reduced pt-16 (4rem) to accommodate smaller icon header */
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); /* Reduced shadow intensity */
-  overflow: hidden;
+  /* blue-500/30 */
+  border-radius: 1rem;
+  padding: 2.5rem 2rem 2rem;
+  /* Top padding accounts for floating icon */
+  padding-top: 3.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   position: relative;
-  z-index: 10;
+  overflow: hidden;
 }
 
-/* Glowing Border effect on hover (before pseudo-element) (No change) */
-.form-card-base::before {
+/* Glowing Border Effect */
+.login-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  border: 2px solid rgba(59, 130, 246, 0.5);
   border-radius: 1rem;
-  opacity: 0;
-  transition-property: opacity;
-  transition-duration: 300ms;
+  padding: 2px;
+  background: linear-gradient(to right, transparent, rgba(59, 130, 246, 0.5), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
-  z-index: 20;
+  opacity: 0.5;
 }
 
-.form-card-base:hover::before {
-  opacity: 1;
+/* Header Section */
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
-/* --- Header Text --- */
-.card-header-text {
-  text-align: left;
-  margin-bottom: 1.5rem; /* Reduced mb-12 (3rem) to mb-6 (1.5rem) */
+.login-title-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
-.header-button {
-  text-align: left;
-  width: 100%;
-}
-
-.header-title {
-  font-size: 1.875rem; /* text-3xl (Reduced from text-4xl) */
-  font-weight: 600;
+.login-title {
+  font-size: 2rem;
+  /* text-3xl */
+  font-weight: 700;
+  color: white;
+  margin: 0;
   letter-spacing: -0.025em;
-  margin-bottom: 0.125rem; /* Reduced margin-bottom */
 }
 
-.header-title-blue {
-  color: #60a5fa;
+.highlight-text {
+  color: #3b82f6;
+  /* blue-500 */
 }
 
-.header-tagline {
-  color: #94a3b8;
-  font-size: 0.875rem; /* text-sm (Reduced from text-base) */
-  height: 1.25rem;
-}
-
-/* --- Error Message Box (No significant change, retains spacing) --- */
-.error-message-box {
-  margin-bottom: 1rem; /* Slightly reduced margin-bottom */
-  padding: 0.5rem; /* Reduced padding */
-  border-radius: 0.5rem;
+/* Error Message */
+.login-error {
   background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  /* red-500/10 */
+  border: 1px solid rgba(239, 68, 68, 0.2);
   color: #fca5a5;
-  font-size: 0.75rem; /* text-xs (Reduced font size) */
+  /* red-300 */
+  font-size: 0.875rem;
+  /* text-sm */
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.error-icon {
-  height: 1rem; /* Reduced icon size */
-  width: 1rem; /* Reduced icon size */
-}
-
-/* --- Form and Inputs --- */
+/* Form Styles */
 .login-form {
-  /* Reduced gap from space-y-8 to space-y-6 equivalent */
-  margin-top: 1.5rem; 
-  margin-bottom: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .input-label {
-  display: block;
-  font-size: 0.875rem; /* text-sm (Reduced from text-base) */
+  color: #94a3b8;
+  /* slate-400 */
+  font-size: 0.875rem;
+  /* text-sm */
   font-weight: 500;
-  color: #cbd5e1;
-  margin-bottom: 0.375rem; /* Reduced margin-bottom */
   display: flex;
   align-items: center;
-  gap: 0.375rem; /* Reduced gap */
+  gap: 0.5rem;
 }
 
 .input-icon {
-  width: 1rem; /* Reduced icon size */
-  height: 1rem; /* Reduced icon size */
-  color: #94a3b8;
+  width: 1rem;
+  height: 1rem;
+  color: #64748b;
+  /* slate-500 */
+}
+
+.input-wrapper {
+  position: relative;
 }
 
 .input-field {
   width: 100%;
-  padding: 0.625rem 0.75rem; /* Reduced padding (smaller input height) */
-  background-color: #1e232e;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.375rem; /* Slightly smaller border radius */
-  color: #ffffff;
-  transition-property: border-color;
-  transition-duration: 150ms;
-}
-
-.input-field::placeholder {
-  color: #64748b;
-  font-size: 0.875rem; /* text-sm */
+  background-color: #1e293b;
+  /* slate-800 */
+  border: 1px solid #334155;
+  /* slate-700 */
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  transition: all 0.2s;
 }
 
 .input-field:focus {
   outline: none;
   border-color: #3b82f6;
+  /* blue-500 */
+  box-shadow: 0 0 0 1px #3b82f6;
+  background-color: #0f172a;
+  /* slate-900 */
 }
 
-/* --- Login Button --- */
+.input-field::placeholder {
+  color: #475569;
+  /* slate-600 */
+}
+
+/* Submit Button */
 .login-button {
-  
-  padding-top: 0.55rem; /* py-3 (Reduced from py-4) */
-  padding-bottom: 0.55rem;
-  margin-top: 1rem; /* mt-8 (Reduced from mt-12) */
-  
-  background-image: linear-gradient(to right, #1d4ed8, #4f46e5);
-  
-  color: #ffffff;
+  margin-top: 1rem;
+  width: 100%;
+  background: linear-gradient(to right, #2563eb, #4f46e5);
+  /* blue-600 to indigo-600 */
+  color: white;
   font-weight: 600;
-  font-size: 1rem; /* text-base (Reduced from text-lg) */
-  border-radius: 0.375rem; /* Reduced border radius */
-  
-  box-shadow: 0 5px 10px -2px rgba(59, 130, 246, 0.4); /* Reduced shadow intensity */
-  
-  transition-property: all;
-  transition-duration: 200ms;
-  
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  
-  position: relative;
-  z-index: 20;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
 }
 
 .login-button:hover:not(:disabled) {
-  background-image: linear-gradient(to right, #1e40af, #4338ca);
+  background: linear-gradient(to right, #1d4ed8, #4338ca);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .login-button:disabled {
-  opacity: 0.5;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
-.login-button-icon {
-  width: 1.125rem; /* Slightly smaller icon */
-  height: 1.125rem;
-}
-
-/* --- Sign Up Link --- */
-.signup-link-wrapper {
+/* Signup / Restricted Section */
+.signup-section {
+  margin-top: 2rem;
   text-align: center;
-  margin-top: 1rem; /* Reduced margin-top */
+  border-top: 1px solid #1e293b;
+  /* slate-800 */
+  padding-top: 1.5rem;
 }
 
 .signup-text {
-  color: #cbd5e1;
-  font-size: 0.75rem; /* text-xs (Reduced font size) */
-}
-
-.signup-link-button {
-  color: #22d3ee;
-  font-weight: 500;
-  transition-property: color;
-  transition-duration: 200ms;
-  cursor: pointer;
-  position: relative;
-  z-index: 20;
-  padding: 0;
-  border: none;
-  background: none;
-}
-
-.signup-link-button:hover {
-  color: #67e8f9;
+  color: #64748b;
+  /* slate-500 */
+  font-size: 0.75rem;
+  /* text-xs */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }

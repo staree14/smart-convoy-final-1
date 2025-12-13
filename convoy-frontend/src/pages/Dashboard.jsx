@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Plus, MapPin, Package, AlertCircle, GitMerge, X, CheckCircle, Truck, Flag } from 'lucide-react';
 import '../styles/dashboard.css';
+import ChatAssistant from '../components/ChatAssistant';
 
 // --- Merge Suggestion Panel Component (Overlay) ---
 const MergeSuggestionBox = ({ convoys, selectedA, setSelectedA, selectedB, setSelectedB, suggestMerge, merging, mergeResult, onClose }) => (
@@ -816,6 +817,7 @@ export default function Dashboard() {
         </div>
 
       </div>
+      <ChatAssistant />
     </div>
   );
 }
