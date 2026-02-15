@@ -1321,10 +1321,10 @@ We welcome contributions! Please follow these guidelines:
 
 **SmartConvoy AI (SARATHI)** is developed by:
 
-- **Sreeya Chand** - Full-Stack Development, Architecture
-- **Samyukthaa M** - Backend Development, Database Design
-- **Prapti** - Frontend Development, UI/UX
-- **Aniksha Anithan** - AI Integration, Analytics
+- **Sreeya Chand** - Backend Development, Architecture
+- **Samyukthaa M** - Backend Development, AI Integration
+- **Prapti** - Database Development and Design
+- **Aniksha Anithan** - Frontend Development, UI/UX, Analytics
 
 **Team Delusion** - Made with dedication for the Indian Army
 
@@ -1382,20 +1382,6 @@ SOFTWARE.
 - React and Vite teams
 - Open-source community
 
----
-
-## Support & Contact
-
-### Documentation
-- **Quick Start**: [QUICK_START.md](QUICK_START.md)
-- **Deployment**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
-- **Database Setup**: [POSTGRES_SETUP_GUIDE.md](POSTGRES_SETUP_GUIDE.md)
-- **API Routes**: [API_ROUTES.md](backend/API_ROUTES.md)
-
-### Get Help
-- **Issues**: [GitHub Issues](https://github.com/yourusername/smart-convoy-final/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/smart-convoy-final/discussions)
-- **Email**: smartconvoy.sarathi@gmail.com (replace with actual)
 
 ### Reporting Bugs
 Please include:
@@ -1492,7 +1478,3 @@ A: Contact us for demo access: smartconvoy.sarathi@gmail.com
 - **Risk Levels**: 3 (low, medium, high)
 
 ---
-
-**Made with ❤️ for efficient and safe convoy operations**
-
-**JAI HIND! 🇮🇳**
